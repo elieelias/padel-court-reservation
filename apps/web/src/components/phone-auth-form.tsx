@@ -26,10 +26,15 @@ function isValidPhoneNumber(value: string) {
 }
 
 function friendlyAuthError(message: string) {
-  if (message.toLowerCase().includes("rate limit")) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("unsupported phone provider") || normalizedMessage.includes("phone provider disabled")) {
+    return "Phone login is not enabled in Supabase yet. Finish the SMS provider setup, then try again.";
+  }
+  if (normalizedMessage.includes("rate limit")) {
     return "Please wait a moment before requesting another code.";
   }
-  if (message.toLowerCase().includes("invalid")) {
+  if (normalizedMessage.includes("invalid")) {
     return "That code is not correct. Check the SMS and try again.";
   }
   return message;
@@ -38,8 +43,8 @@ function friendlyAuthError(message: string) {
 export function PhoneAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthMode }) {
   const router = useRouter();
   const [step, setStep] = useState<AuthStep>("details");
-  const [fullName, setFullName] = useState("");
-  const [phoneInput, setPhoneInput] = useState("");
+  const [fullName, setFullName] = useState<string>("");
+  const [phoneInput, setPhoneInput] = useState<string>("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -50,7 +55,7 @@ export function PhoneAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
     event?.preventDefault();
     setMessage("");
 
-    const normalizedPhone = normalizePhoneNumber(phoneInput);
+    const normalizedPhone = normalizePhoneNumber(phoneInput ?? "");
     if (!isValidPhoneNumber(normalizedPhone)) {
       setMessage("Enter a valid mobile number, including the country code if it is not Lebanese.");
       return;
@@ -160,7 +165,7 @@ export function PhoneAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
             name="full-name"
             type="text"
             autoComplete="name"
-            value={fullName}
+            value={fullName ?? ""}
             onChange={(event) => setFullName(event.target.value)}
             placeholder="Your full name"
             required
@@ -174,7 +179,7 @@ export function PhoneAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          value={phoneInput}
+          value={phoneInput ?? ""}
           onChange={(event) => setPhoneInput(event.target.value)}
           placeholder="03 123 456 or +961 71 123 456"
           required
