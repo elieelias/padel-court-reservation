@@ -2,6 +2,7 @@
 
 import { CheckCircle2, PencilLine } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { siteUrl } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -65,7 +66,7 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
       email: normalizedEmail,
       options: {
         shouldCreateUser: isSignUp,
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/book`,
+        emailRedirectTo: `${siteUrl}/auth/confirm?next=/book`,
         ...(isSignUp ? { data: { full_name: fullName.trim() } } : {}),
       },
     });
