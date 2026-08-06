@@ -109,7 +109,7 @@ export function PhoneAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
       return;
     }
 
-    router.replace("/");
+    router.replace("/book");
     router.refresh();
   }
 

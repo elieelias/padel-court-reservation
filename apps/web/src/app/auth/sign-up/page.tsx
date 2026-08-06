@@ -8,7 +8,7 @@ export const metadata = { title: "Create account" };
 export default function SignUpPage() {
   return (
     <div className="auth-wrap">
-      <Link className="back-link" href="/profile"><ArrowLeft aria-hidden="true" size={18} /> Back to account</Link>
+      <Link className="back-link" href="/"><ArrowLeft aria-hidden="true" size={18} /> Back to home</Link>
       <section className="auth-card">
         <span className="auth-icon"><UserRoundPlus aria-hidden="true" size={26} /></span>
         <span className="eyebrow">New player</span>

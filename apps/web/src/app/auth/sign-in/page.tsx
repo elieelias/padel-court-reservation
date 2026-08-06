@@ -8,7 +8,7 @@ export const metadata = { title: "Sign in" };
 export default function SignInPage() {
   return (
     <div className="auth-wrap">
-      <Link className="back-link" href="/profile"><ArrowLeft aria-hidden="true" size={18} /> Back to account</Link>
+      <Link className="back-link" href="/"><ArrowLeft aria-hidden="true" size={18} /> Back to home</Link>
       <section className="auth-card">
         <span className="auth-icon"><LockKeyhole aria-hidden="true" size={26} /></span>
         <span className="eyebrow">Player access</span>
