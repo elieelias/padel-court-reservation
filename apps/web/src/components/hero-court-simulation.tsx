@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type BallPosition = { x: number; y: number; duration: number };
 
 export function HeroCourtSimulation() {
-  const [ball, setBall] = useState<BallPosition>({ x: 24, y: 32, duration: 720 });
+  const [ball, setBall] = useState<BallPosition>({ x: 24, y: 32, duration: 1450 });
 
   useEffect(() => {
     let active = true;
@@ -15,7 +15,7 @@ export function HeroCourtSimulation() {
     function continueRally() {
       if (!active) return;
       movingToFarSide = !movingToFarSide;
-      const duration = 560 + Math.round(Math.random() * 420);
+      const duration = 1300 + Math.round(Math.random() * 700);
       setBall({
         x: 14 + Math.random() * 72,
         y: movingToFarSide ? 61 + Math.random() * 24 : 15 + Math.random() * 24,

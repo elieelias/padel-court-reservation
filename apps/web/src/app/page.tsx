@@ -21,7 +21,7 @@ export default function HomePage() {
       <section className="steps-section landing-steps">
         <div><span className="eyebrow">How it works</span><h2>One account for every match</h2><p>Keep booking, player requests, and your match history together.</p></div>
         <ol className="steps-list">
-          <li><strong>01</strong><span><b>Join with your phone</b>Register with your name and mobile number.</span></li>
+          <li><strong>01</strong><span><b>Join with your email</b>Register with your name and email address.</span></li>
           <li><strong>02</strong><span><b>Choose how to play</b>Book for your group or create an Open Court.</span></li>
           <li><strong>03</strong><span><b>Keep track</b>See upcoming reservations and match history in your profile.</span></li>
         </ol>

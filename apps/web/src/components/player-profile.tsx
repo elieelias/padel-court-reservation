@@ -1,7 +1,7 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { CalendarClock, CircleUserRound, History, LogOut, Phone } from "lucide-react";
+import { CalendarClock, CircleUserRound, History, LogOut, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -45,14 +45,14 @@ export function PlayerProfile({ enabled }: { enabled: boolean }) {
           <>
             <div><span className="eyebrow">Player information</span><h2>{fullName}</h2></div>
             <dl className="player-details">
-              <div><dt><Phone aria-hidden="true" size={17} /> Mobile number</dt><dd>{user.phone ?? "Not available"}</dd></div>
+              <div><dt><Mail aria-hidden="true" size={17} /> Email address</dt><dd>{user.email ?? "Not available"}</dd></div>
             </dl>
             <button className="button button--secondary sign-out-button" onClick={() => void signOut()} type="button"><LogOut aria-hidden="true" size={17} /> Sign out</button>
           </>
         ) : (
           <>
             <div><span className="eyebrow">Player information</span><h2>Sign in to view your profile</h2></div>
-            <p>Your name, mobile number, and reservations will appear here after you sign in.</p>
+            <p>Your name, email address, and reservations will appear here after you sign in.</p>
             <div className="button-row">
               <Link className="button button--primary" href="/auth/sign-in">Sign in</Link>
               <Link className="button button--secondary" href="/auth/sign-up">Register</Link>

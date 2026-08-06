@@ -3,6 +3,7 @@
   --secondary: #a12b2b;
   --tertiary: #f4f7f2;
   --neutral: #2d312e;
+  --ball-green: #d8ef68;
   --sand: var(--tertiary);
   --oat: color-mix(in srgb, var(--neutral) 7%, var(--tertiary));
   --sage: color-mix(in srgb, var(--primary) 24%, var(--tertiary));
@@ -79,7 +80,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .sim-court__service--right { bottom: 25%; }
 .sim-court__center { display: none; }
 .sim-court__net { top: 50%; right: 3%; left: 3%; z-index: 3; height: 7px; border-radius: 8px; background: var(--neutral); box-shadow: 0 3px 0 color-mix(in srgb, var(--tertiary) 45%, transparent); transform: translateY(-50%); }
-.sim-court__ball { position: absolute; z-index: 4; width: 20px; aspect-ratio: 1; border: 3px solid var(--tertiary); border-radius: 50%; background: var(--secondary); box-shadow: 0 7px 14px color-mix(in srgb, var(--neutral) 42%, transparent); transform: translate(-50%, -50%); transition-property: top, left; transition-timing-function: cubic-bezier(.45, .05, .55, .95); }
+.sim-court__ball { position: absolute; z-index: 4; width: 22px; aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--ball-green) 62%, var(--tertiary)); border-radius: 50%; background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--ball-green) 44%, var(--tertiary)) 0 8%, var(--ball-green) 36%, color-mix(in srgb, var(--ball-green) 72%, var(--primary)) 100%); box-shadow: inset -4px -4px 5px color-mix(in srgb, var(--primary) 24%, transparent), inset 2px 2px 3px color-mix(in srgb, var(--tertiary) 45%, transparent), 0 9px 15px color-mix(in srgb, var(--neutral) 45%, transparent); transform: translate(-50%, -50%); transition-property: top, left; transition-timing-function: cubic-bezier(.4, .1, .6, .9); }
+.sim-court__ball::before { position: absolute; inset: 3px 1px; border: 1.5px solid color-mix(in srgb, var(--primary) 24%, transparent); border-right-color: transparent; border-left-color: transparent; border-radius: 50%; content: ""; transform: rotate(38deg); }
 .court-shadow { position: absolute; right: 5%; bottom: 0; left: 5%; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--neutral) 25%, transparent); filter: blur(17px); }
 .eyebrow { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .button-row { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -95,7 +97,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .court-note { position: absolute; z-index: 2; display: flex; align-items: center; gap: 8px; max-width: 180px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--oat); color: var(--ink); box-shadow: var(--shadow); font-size: .72rem; font-weight: 700; }
 .court-note--one { top: 0; left: 0; }
 .court-note--two { right: 0; bottom: 0; }
-.court-ball { position: absolute; top: 16%; right: 11%; width: 22px; aspect-ratio: 1; border-radius: 50%; background: var(--ochre); box-shadow: inset -5px -3px 0 color-mix(in srgb, var(--clay) 55%, transparent); animation: breathe 3s ease-in-out infinite; }
+.court-ball { position: absolute; top: 16%; right: 11%; width: 22px; aspect-ratio: 1; border-radius: 50%; background: var(--ball-green); box-shadow: inset -5px -3px 0 color-mix(in srgb, var(--primary) 24%, transparent); animation: breathe 3s ease-in-out infinite; }
 @keyframes breathe { 50% { transform: translateY(-6px) scale(1.06); } }
 .panel, .setup-state, .steps-section { padding: clamp(22px, 4vw, 34px); border: 1px solid var(--border); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 75%, var(--oat)); }
 .dashboard-grid, .profile-grid { display: grid; gap: 16px; }
