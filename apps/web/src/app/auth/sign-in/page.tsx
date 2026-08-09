@@ -26,7 +26,7 @@ export default async function SignInPage({
         <span className="auth-icon"><LockKeyhole aria-hidden="true" size={26} /></span>
         <span className="eyebrow">Player access</span>
         <h1>Sign in</h1>
-        <p>{emailVerificationCodeEnabled ? "Enter your email address. We’ll send a six-digit code and a secure sign-in button in the same email." : "Enter your email address. We’ll send you a secure sign-in link."}</p>
+        <p>{emailVerificationCodeEnabled ? "Enter your email address. We’ll send an eight-digit code and a secure sign-in button in the same email." : "Enter your email address. We’ll send you a secure sign-in link."}</p>
         {errorMessage ? <p className="form-message" role="alert">{errorMessage}</p> : null}
         <EmailAuthForm enabled={hasSupabaseConfig} mode="sign-in" />
         <p className="auth-switch">New player? <Link href="/auth/sign-up">Create an account</Link></p>

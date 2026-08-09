@@ -92,8 +92,8 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
     event.preventDefault();
     setMessage("");
 
-    if (!/^\d{6}$/.test(verificationCode)) {
-      setMessage("Enter the six-digit code from your email.");
+    if (!/^\d{8}$/.test(verificationCode)) {
+      setMessage("Enter the eight-digit code from your email.");
       return;
     }
 
@@ -122,17 +122,17 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
           <span>Verification email sent to <strong>{email}</strong></span>
         </div>
         <label>
-          Six-digit code
+          Eight-digit code
           <input
             aria-describedby="verification-help"
             autoComplete="one-time-code"
             className="otp-input"
             inputMode="numeric"
-            maxLength={6}
+            maxLength={8}
             name="verification-code"
-            onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-            pattern="[0-9]{6}"
-            placeholder="000000"
+            onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 8))}
+            pattern="[0-9]{8}"
+            placeholder="00000000"
             required
             type="text"
             value={verificationCode}

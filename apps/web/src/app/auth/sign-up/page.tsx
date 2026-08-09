@@ -13,7 +13,7 @@ export default function SignUpPage() {
         <span className="auth-icon"><UserRoundPlus aria-hidden="true" size={26} /></span>
         <span className="eyebrow">New player</span>
         <h1>Create account</h1>
-        <p>{emailVerificationCodeEnabled ? "Enter your name and email address. We’ll send a six-digit code and a secure verification button." : "Enter your name and email address. That’s all we need to get started."}</p>
+        <p>{emailVerificationCodeEnabled ? "Enter your name and email address. We’ll send an eight-digit code and a secure verification button." : "Enter your name and email address. That’s all we need to get started."}</p>
         <EmailAuthForm enabled={hasSupabaseConfig} mode="sign-up" />
         <p className="auth-switch">Already registered? <Link href="/auth/sign-in">Sign in</Link></p>
       </section>
