@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={`site-shell${isPublicRoute ? " site-shell--public" : ""}${isBookPage ? " site-shell--calendar" : ""}`}>
-      {!isBookPage && <header className="site-header">
+      <header className="site-header">
         <Link className="brand" href="/" aria-label={`${facilityName} home`}>
           <CourtMark compact />
           <span>{facilityName}<small>Reservations</small></span>
@@ -30,13 +30,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="public-auth-actions">
             <Link className="button button--primary" href="/auth/sign-up">Join</Link>
           </div>
-        ) : !isPublicRoute ? (
-          <Link className="account-link" href="/profile">
-            <CircleUserRound aria-hidden="true" size={20} />
-            <span>Profile</span>
-          </Link>
         ) : null}
-      </header>}
+      </header>
 
       <div className={isPublicRoute ? "public-frame" : "app-frame"}>
         {!isPublicRoute && <aside className="desktop-rail">

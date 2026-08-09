@@ -10,3 +10,6 @@ export const hasSupabaseConfig = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
+
+export const emailVerificationCodeEnabled =
+  process.env.NEXT_PUBLIC_EMAIL_VERIFICATION_CODE_ENABLED === "true";

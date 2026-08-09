@@ -1,7 +1,7 @@
 import { ArrowLeft, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 import { EmailAuthForm } from "@/components/email-auth-form";
-import { hasSupabaseConfig } from "@/lib/config";
+import { emailVerificationCodeEnabled, hasSupabaseConfig } from "@/lib/config";
 
 export const metadata = { title: "Create account" };
 
@@ -13,7 +13,7 @@ export default function SignUpPage() {
         <span className="auth-icon"><UserRoundPlus aria-hidden="true" size={26} /></span>
         <span className="eyebrow">New player</span>
         <h1>Create account</h1>
-        <p>Enter your name and email address. That’s all we need to get started.</p>
+        <p>{emailVerificationCodeEnabled ? "Enter your name and email address. We’ll send a six-digit code and a secure verification button." : "Enter your name and email address. That’s all we need to get started."}</p>
         <EmailAuthForm enabled={hasSupabaseConfig} mode="sign-up" />
         <p className="auth-switch">Already registered? <Link href="/auth/sign-in">Sign in</Link></p>
       </section>

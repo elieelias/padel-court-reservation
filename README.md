@@ -5,7 +5,7 @@ Player web application for a single-court padel facility. The project uses a wor
 ## Structure
 
 - `apps/web` — responsive Next.js player application
-- `apps/admin` — reserved for the Expo administrator application
+- `apps/admin` — React Native and Expo administrator mobile application
 - `packages` — reserved for shared types and validation
 - `supabase` — reserved for database migrations, functions, and seed data
 

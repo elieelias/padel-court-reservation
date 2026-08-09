@@ -4,8 +4,13 @@
   "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "pnpm --filter web dev",
+    "dev:admin": "pnpm --filter admin start",
+    "android:admin": "pnpm --filter admin android",
+    "ios:admin": "pnpm --filter admin ios",
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
-    "typecheck": "pnpm --filter web typecheck"
+    "lint:admin": "pnpm --filter admin lint",
+    "typecheck": "pnpm --filter web typecheck",
+    "typecheck:admin": "pnpm --filter admin typecheck"
   }
 }
