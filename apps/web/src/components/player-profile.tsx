@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { CalendarClock, CircleUserRound, History, LogOut, Mail, Phone, Save, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export type ProfileRow = { full_name: string | null; phone_number: string | null };
@@ -63,7 +63,12 @@ export function PlayerProfile({ enabled, initialUser, initialProfile, initialRes
   const [phoneNumber, setPhoneNumber] = useState(initialProfile.phone_number ?? "");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [currentTime] = useState(() => Date.now());
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   async function refreshReservations() {
     if (!enabled || !user) return;
@@ -151,7 +156,9 @@ export function PlayerProfile({ enabled, initialUser, initialProfile, initialRes
         </div>
         <div className="reservation-item__chips">
           <span className={`reservation-status reservation-status--${reservation.status}`}>{reservation.status}</span>
-          <span className={`payment-status payment-status--${reservation.payment_status}`}><WalletCards aria-hidden="true" size={14} /> Cash {reservation.payment_status}</span>
+          {!upcomingItem && (
+            <span className={`payment-status payment-status--${reservation.payment_status}`}><WalletCards aria-hidden="true" size={14} /> Cash {reservation.payment_status}</span>
+          )}
         </div>
         <dl className="reservation-item__details">
           <div><dt>Reservation</dt><dd>{reservation.type === "open" ? "Open Court" : "Private court"}</dd></div>
@@ -161,9 +168,6 @@ export function PlayerProfile({ enabled, initialUser, initialProfile, initialRes
           <button className="reservation-cancel" disabled={cancellingId === reservation.id} onClick={() => void cancelReservation(reservation)} type="button">
             {cancellingId === reservation.id ? "Cancelling…" : "Cancel reservation"}
           </button>
-        )}
-        {upcomingItem && !canCancel(reservation) && reservation.host_id === user?.id && (
-          <small className="reservation-item__note">Cancellation closes {cancellationHours} hours before the reservation.</small>
         )}
       </article>
     );

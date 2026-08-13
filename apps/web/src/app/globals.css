@@ -377,7 +377,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .reservation-item__details > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px solid color-mix(in srgb, var(--neutral) 12%, var(--tertiary)); font-size: .72rem; }
 .reservation-item__details dt { color: color-mix(in srgb, var(--neutral) 63%, transparent); }
 .reservation-item__details dd { margin: 0; font-weight: 700; }
-.reservation-cancel { justify-self: start; padding: 4px 0; border: 0; background: transparent; color: var(--secondary); font-size: .72rem; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.reservation-cancel { justify-self: stretch; min-height: 44px; padding: 10px 16px; border: 1px solid var(--secondary); border-radius: 999px; background: transparent; color: var(--secondary); font-size: .74rem; font-weight: 700; cursor: pointer; transition: background var(--ease), color var(--ease), opacity var(--ease); }
+.reservation-cancel:hover { background: var(--secondary); color: var(--tertiary); }
 .reservation-cancel:disabled { opacity: .55; cursor: wait; }
 .reservation-item__note { color: color-mix(in srgb, var(--neutral) 60%, transparent); font-size: .66rem; line-height: 1.5; }
 .empty-reservation { display: grid; justify-items: start; gap: 7px; padding: 22px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--neutral) 4%, var(--tertiary)); }
