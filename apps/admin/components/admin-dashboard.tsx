@@ -33,7 +33,6 @@ import {
   inputTime,
   isDateKey,
   isTime,
-  shiftDateKey,
   todayKey,
   zonedDateTimeToIso,
 } from '@/lib/date';
@@ -45,14 +44,74 @@ type BlockedPeriod = Tables<'blocked_periods'>;
 type ScheduleRule = Tables<'schedule_rules'>;
 type FacilitySettings = Tables<'facility_settings'>;
 type Player = Database['public']['Functions']['admin_list_players']['Returns'][number];
-type TabName = 'schedule' | 'reservations' | 'blocked' | 'players';
+type TabName = 'schedule' | 'blocked' | 'players' | 'analytics';
 
 const tabs: { icon: keyof typeof Ionicons.glyphMap; label: string; value: TabName }[] = [
   { icon: 'calendar-outline', label: 'Schedule', value: 'schedule' },
-  { icon: 'receipt-outline', label: 'Bookings', value: 'reservations' },
   { icon: 'ban-outline', label: 'Blocked', value: 'blocked' },
   { icon: 'people-outline', label: 'Players', value: 'players' },
+  { icon: 'bar-chart-outline', label: 'Analytics', value: 'analytics' },
 ];
+
+const weekdayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+function dateKeyParts(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return { year, month, day };
+}
+
+function dateKeyFromParts(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function addDaysToDateKey(dateKey: string, amount: number) {
+  const { year, month, day } = dateKeyParts(dateKey);
+  const value = new Date(Date.UTC(year, month - 1, day + amount, 12));
+  return dateKeyFromParts(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate());
+}
+
+function addMonthToDateKey(dateKey: string) {
+  const { year, month, day } = dateKeyParts(dateKey);
+  const target = new Date(Date.UTC(year, month, 1, 12));
+  const targetYear = target.getUTCFullYear();
+  const targetMonth = target.getUTCMonth() + 1;
+  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth, 0, 12)).getUTCDate();
+  return dateKeyFromParts(targetYear, targetMonth, Math.min(day, daysInTargetMonth));
+}
+
+function startOfWeekDateKey(dateKey: string) {
+  return addDaysToDateKey(dateKey, -dateKeyDayOfWeek(dateKey));
+}
+
+function daysBetween(startDateKey: string, endDateKey: string) {
+  const start = dateKeyParts(startDateKey);
+  const end = dateKeyParts(endDateKey);
+  return Math.round((
+    Date.UTC(end.year, end.month - 1, end.day, 12)
+    - Date.UTC(start.year, start.month - 1, start.day, 12)
+  ) / 86_400_000);
+}
+
+function monthBounds(dateKey: string, timeZone: string) {
+  const { year, month } = dateKeyParts(dateKey);
+  const nextMonth = new Date(Date.UTC(year, month, 1, 12));
+  return {
+    start: zonedDateTimeToIso(dateKeyFromParts(year, month, 1), '00:00', timeZone),
+    end: zonedDateTimeToIso(dateKeyFromParts(nextMonth.getUTCFullYear(), nextMonth.getUTCMonth() + 1, 1), '00:00', timeZone),
+  };
+}
+
+function monthLabel(dateKey: string) {
+  const { year, month } = dateKeyParts(dateKey);
+  return new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(year, month - 1, 1, 12)));
+}
+
+function monthDayLabel(dateKey: string) {
+  const { year, month, day } = dateKeyParts(dateKey);
+  return new Intl.DateTimeFormat('en', { month: 'long', day: 'numeric', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
 
 function errorText(error: { message?: string } | null, fallback: string) {
   if (!error?.message) return fallback;
@@ -73,6 +132,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
   const [activeTab, setActiveTab] = useState<TabName>('schedule');
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [analyticsReservations, setAnalyticsReservations] = useState<Reservation[]>([]);
   const [blockedPeriods, setBlockedPeriods] = useState<BlockedPeriod[]>([]);
   const [scheduleRules, setScheduleRules] = useState<ScheduleRule[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -92,22 +152,26 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     setMessage('');
-    const bounds = dayBounds(selectedDate, timeZone);
-    const [settingsResult, scheduleResult, reservationsResult, blocksResult, playersResult] = await Promise.all([
+    const selectedMonthBounds = monthBounds(selectedDate, timeZone);
+    const analyticsMonthBounds = monthBounds(todayKey(timeZone), timeZone);
+    const now = new Date().toISOString();
+    const [settingsResult, scheduleResult, reservationsResult, analyticsResult, blocksResult, playersResult] = await Promise.all([
       supabase.from('facility_settings').select('*').eq('id', 1).single(),
       supabase.from('schedule_rules').select('*').order('day_of_week'),
-      supabase.from('reservations').select('*').gte('start_at', bounds.start).lt('start_at', bounds.end).order('start_at'),
-      supabase.from('blocked_periods').select('*').order('start_at', { ascending: false }).limit(200),
+      supabase.from('reservations').select('*').gte('start_at', selectedMonthBounds.start).lt('start_at', selectedMonthBounds.end).order('start_at'),
+      supabase.from('reservations').select('*').gte('start_at', analyticsMonthBounds.start).lt('start_at', analyticsMonthBounds.end).order('start_at'),
+      supabase.from('blocked_periods').select('*').gt('end_at', now).order('start_at').limit(200),
       supabase.rpc('admin_list_players'),
     ]);
 
-    const firstError = settingsResult.error || scheduleResult.error || reservationsResult.error || blocksResult.error || playersResult.error;
+    const firstError = settingsResult.error || scheduleResult.error || reservationsResult.error || analyticsResult.error || blocksResult.error || playersResult.error;
     if (firstError) {
       setMessage(errorText(firstError, 'Administrator data could not be loaded.'));
     } else {
       setSettings(settingsResult.data);
       setScheduleRules(scheduleResult.data ?? []);
       setReservations(reservationsResult.data ?? []);
+      setAnalyticsReservations(analyticsResult.data ?? []);
       setBlockedPeriods(blocksResult.data ?? []);
       setPlayers(playersResult.data ?? []);
     }
@@ -119,6 +183,11 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
     void loadData();
   }, [loadData]);
 
+  const selectedReservations = useMemo(() => {
+    const bounds = dayBounds(selectedDate, timeZone);
+    return reservations.filter((reservation) => reservation.start_at >= bounds.start && reservation.start_at < bounds.end);
+  }, [reservations, selectedDate, timeZone]);
+
   const selectedBlocks = useMemo(() => {
     const bounds = dayBounds(selectedDate, timeZone);
     return blockedPeriods
@@ -126,7 +195,14 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
       .sort((a, b) => a.start_at.localeCompare(b.start_at));
   }, [blockedPeriods, selectedDate, timeZone]);
 
-  const unpaidCount = reservations.filter((reservation) => reservation.payment_status === 'unpaid' && !['cancelled', 'expired'].includes(reservation.status)).length;
+  const upcomingBlockedPeriods = useMemo(
+    () => blockedPeriods
+      .filter((period) => period.end_at > new Date().toISOString())
+      .sort((a, b) => a.start_at.localeCompare(b.start_at)),
+    [blockedPeriods],
+  );
+
+  const unpaidCount = selectedReservations.filter((reservation) => reservation.payment_status === 'unpaid' && !['cancelled', 'expired'].includes(reservation.status)).length;
   const scheduleRule = scheduleRules.find((rule) => rule.day_of_week === dateKeyDayOfWeek(selectedDate));
 
   async function refresh() {
@@ -272,47 +348,40 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
           <IconButton accessibilityLabel="Sign out" icon="log-out-outline" onPress={() => void signOut()} />
         </View>
 
-        <View style={styles.dateHero}>
-          <Text style={styles.dateNumeral}>{dateHeading.numeral}</Text>
-          <View style={styles.dateCopy}>
-            <Text style={styles.dateWeekday}>{dateHeading.weekday}</Text>
-            <Text style={styles.dateMonth}>{dateHeading.monthYear}</Text>
-          </View>
-        </View>
+        {activeTab === 'schedule' ? (
+          <>
+            <View style={styles.dateHero}>
+              <Text style={styles.dateNumeral}>{dateHeading.numeral}</Text>
+              <View style={styles.dateCopy}>
+                <Text style={styles.dateWeekday}>{dateHeading.weekday}</Text>
+                <Text style={styles.dateMonth}>{dateHeading.monthYear}</Text>
+              </View>
+            </View>
 
-        <View style={styles.dayControls}>
-          <IconButton accessibilityLabel="Previous day" icon="chevron-back" onPress={() => setSelectedDate((value) => shiftDateKey(value, -1))} />
-          <ActionButton onPress={() => setSelectedDate(todayKey(timeZone))} variant="quiet">Today</ActionButton>
-          <IconButton accessibilityLabel="Next day" icon="chevron-forward" onPress={() => setSelectedDate((value) => shiftDateKey(value, 1))} />
-        </View>
-
-        <View style={styles.statsGrid}>
-          <Stat label="Reservations" value={String(reservations.length)} />
-          <Stat label="Unpaid" value={String(unpaidCount)} />
-          <Stat label="Blocked" value={String(selectedBlocks.length)} />
-        </View>
+            <View style={styles.statsGrid}>
+              <Stat label="Reservations" value={String(selectedReservations.length)} />
+              <Stat label="Unpaid" value={String(unpaidCount)} />
+              <Stat label="Blocked" value={String(selectedBlocks.length)} />
+            </View>
+          </>
+        ) : null}
 
         {message ? <Notice>{message}</Notice> : null}
-        {loading ? <LoadingBlock label="Loading the daily court schedule…" /> : (
+        {loading ? <LoadingBlock label="Loading administrator data…" /> : (
           <View style={styles.sectionBody}>
             {activeTab === 'schedule' ? (
-              <SchedulePanel
-                blocks={selectedBlocks}
-                dateLabel={dateHeading.long}
-                onSelectReservation={setSelectedReservation}
-                playerById={playerById}
-                reservations={reservations}
-                rule={scheduleRule}
-                timeZone={timeZone}
-              />
-            ) : null}
-            {activeTab === 'reservations' ? (
-              <ReservationsPanel
-                onSelect={setSelectedReservation}
-                playerById={playerById}
-                reservations={reservations}
-                timeZone={timeZone}
-              />
+              <View style={styles.panelStack}>
+                <BookingDatePicker onSelectDate={setSelectedDate} selectedDate={selectedDate} timeZone={timeZone} />
+                <SchedulePanel
+                  blocks={selectedBlocks}
+                  dateLabel={dateHeading.long}
+                  onSelectReservation={setSelectedReservation}
+                  playerById={playerById}
+                  reservations={selectedReservations}
+                  rule={scheduleRule}
+                  timeZone={timeZone}
+                />
+              </View>
             ) : null}
             {activeTab === 'blocked' ? (
               <BlockedPeriodsPanel
@@ -320,12 +389,15 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                 defaultDate={selectedDate}
                 onCreate={createBlockedPeriod}
                 onDelete={deleteBlockedPeriod}
-                periods={blockedPeriods}
+                periods={upcomingBlockedPeriods}
                 timeZone={timeZone}
               />
             ) : null}
             {activeTab === 'players' ? (
               <PlayersPanel onEdit={setEditingPlayer} players={players} />
+            ) : null}
+            {activeTab === 'analytics' ? (
+              <AnalyticsPanel playersCount={players.length} reservations={analyticsReservations} />
             ) : null}
           </View>
         )}
@@ -386,6 +458,69 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
     <View style={styles.sectionHeading}>
       <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
       <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+function BookingDatePicker({
+  onSelectDate,
+  selectedDate,
+  timeZone,
+}: {
+  onSelectDate: (dateKey: string) => void;
+  selectedDate: string;
+  timeZone: string;
+}) {
+  const today = todayKey(timeZone);
+  const bookingLimit = addMonthToDateKey(today);
+  const firstCell = startOfWeekDateKey(today);
+  const dayCount = daysBetween(firstCell, bookingLimit) + 1;
+  const calendarDays = Array.from({ length: dayCount }, (_, index) => addDaysToDateKey(firstCell, index));
+  const todayParts = dateKeyParts(today);
+  const rangeLabel = `${monthDayLabel(today)} – ${monthDayLabel(bookingLimit)}`;
+
+  return (
+    <View style={styles.calendarCard}>
+      <View style={styles.calendarHeader}>
+        <Text style={styles.calendarTitle}>{rangeLabel}</Text>
+        <Text style={styles.calendarRangeNote}>One month ahead</Text>
+      </View>
+      <View style={styles.calendarWeekdays}>
+        {weekdayLabels.map((label, index) => <Text key={`${label}-${index}`} style={styles.calendarWeekday}>{label}</Text>)}
+      </View>
+      <View style={styles.calendarGrid}>
+        {calendarDays.map((dateKey) => {
+          const dateParts = dateKeyParts(dateKey);
+          const isBeforeToday = dateKey < today;
+          const isSelected = dateKey === selectedDate;
+          const isToday = dateKey === today;
+          const isNextMonth = dateParts.year !== todayParts.year || dateParts.month !== todayParts.month;
+          return (
+            <View key={dateKey} style={styles.calendarDaySlot}>
+              <Pressable
+                accessibilityLabel={formatDayHeading(dateKey).long}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isBeforeToday, selected: isSelected }}
+                disabled={isBeforeToday}
+                onPress={() => onSelectDate(dateKey)}
+                style={({ pressed }) => [
+                  styles.calendarDay,
+                  isToday && !isSelected && styles.calendarDayToday,
+                  isSelected && styles.calendarDaySelected,
+                  pressed && !isBeforeToday && !isSelected && styles.calendarDayPressed,
+                ]}>
+                <Text style={[
+                  styles.calendarDayText,
+                  isBeforeToday && styles.calendarDayTextDisabled,
+                  isNextMonth && !isSelected && !isBeforeToday && styles.calendarDayTextNextMonth,
+                  isToday && !isSelected && styles.calendarDayTextToday,
+                  isSelected && styles.calendarDayTextSelected,
+                ]}>{dateParts.day}</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -455,45 +590,6 @@ function SchedulePanel({
           ))}
         </View>
       )}
-    </View>
-  );
-}
-
-function ReservationsPanel({
-  onSelect,
-  playerById,
-  reservations,
-  timeZone,
-}: {
-  onSelect: (reservation: Reservation) => void;
-  playerById: Map<string, Player>;
-  reservations: Reservation[];
-  timeZone: string;
-}) {
-  return (
-    <View style={styles.panelStack}>
-      <SectionHeading eyebrow="By date and time" title="Reservations" />
-      {!reservations.length ? (
-        <EmptyState icon="receipt-outline" text="Reservations created through the player website will appear here." title="No reservations on this date" />
-      ) : reservations.map((reservation) => (
-        <Pressable key={reservation.id} onPress={() => onSelect(reservation)} style={styles.reservationCard}>
-          <View style={styles.reservationTimeColumn}>
-            <Text style={styles.reservationTime}>{formatTime(reservation.start_at, timeZone)}</Text>
-            <Text style={styles.reservationEnd}>{formatTime(reservation.end_at, timeZone)}</Text>
-          </View>
-          <View style={styles.reservationCardBody}>
-            <View style={styles.rowBetween}>
-              <Text numberOfLines={1} style={styles.cardTitle}>{playerLabel(playerById.get(reservation.host_id))}</Text>
-              <Ionicons color={colors.accent} name="chevron-forward" size={18} />
-            </View>
-            <View style={styles.chipRow}>
-              <StatusChip emphasized={reservation.status === 'confirmed'}>{reservation.status}</StatusChip>
-              <StatusChip emphasized={reservation.payment_status === 'unpaid'}>Cash {reservation.payment_status}</StatusChip>
-            </View>
-            <Text style={styles.cardMeta}>{titleCase(reservation.type)} · {Number(reservation.price).toFixed(2)}</Text>
-          </View>
-        </Pressable>
-      ))}
     </View>
   );
 }
@@ -711,7 +807,13 @@ function BlockedPeriodsPanel({
       setError('Use YYYY-MM-DD for the date and HH:MM for each time.');
       return;
     }
-    if (zonedDateTimeToIso(values.date, values.endTime, timeZone) <= zonedDateTimeToIso(values.date, values.startTime, timeZone)) {
+    const startAt = zonedDateTimeToIso(values.date, values.startTime, timeZone);
+    const endAt = zonedDateTimeToIso(values.date, values.endTime, timeZone);
+    if (startAt <= new Date().toISOString()) {
+      setError('The blocked period must start in the future.');
+      return;
+    }
+    if (endAt <= startAt) {
       setError('End time must be after start time.');
       return;
     }
@@ -735,7 +837,7 @@ function BlockedPeriodsPanel({
         <ActionButton disabled={Boolean(busy)} icon="add-outline" onPress={() => void submit()}>{busy === 'create-block' ? 'Creating…' : 'Block this period'}</ActionButton>
       </View>
 
-      <Text style={styles.listTitle}>Recent blocked periods</Text>
+      <Text style={styles.listTitle}>Upcoming blocked periods</Text>
       {!periods.length ? <EmptyState icon="ban-outline" text="Blocked periods created here will also remove those times from player availability." title="No blocked periods" /> : periods.map((period) => (
         <View key={period.id} style={styles.blockCard}>
           <View style={styles.flexField}>
@@ -773,6 +875,80 @@ function PlayersPanel({ onEdit, players }: { onEdit: (player: Player) => void; p
           <Ionicons color={colors.accent} name="create-outline" size={20} />
         </Pressable>
       ))}
+    </View>
+  );
+}
+
+function AnalyticsPanel({ playersCount, reservations }: { playersCount: number; reservations: Reservation[] }) {
+  const activeReservations = reservations.filter((reservation) => !['cancelled', 'expired'].includes(reservation.status));
+  const bookedHours = activeReservations.reduce(
+    (total, reservation) => total + Math.max(0, new Date(reservation.end_at).getTime() - new Date(reservation.start_at).getTime()) / 3_600_000,
+    0,
+  );
+  const received = reservations
+    .filter((reservation) => reservation.payment_status === 'paid')
+    .reduce((total, reservation) => total + Number(reservation.price), 0);
+  const outstanding = activeReservations
+    .filter((reservation) => reservation.payment_status === 'unpaid')
+    .reduce((total, reservation) => total + Number(reservation.price), 0);
+  const privateCount = activeReservations.filter((reservation) => reservation.type === 'private').length;
+  const openCount = activeReservations.filter((reservation) => reservation.type === 'open').length;
+  const confirmedCount = reservations.filter((reservation) => reservation.status === 'confirmed').length;
+  const completedCount = reservations.filter((reservation) => reservation.status === 'completed').length;
+  const cancelledCount = reservations.filter((reservation) => ['cancelled', 'expired'].includes(reservation.status)).length;
+  const largestDistributionValue = Math.max(privateCount, openCount, confirmedCount, completedCount, cancelledCount, 1);
+
+  return (
+    <View style={styles.panelStack}>
+      <SectionHeading eyebrow="Current month" title={monthLabel(todayKey())} />
+      <View style={styles.analyticsGrid}>
+        <AnalyticsMetric label="Reservations" value={String(activeReservations.length)} />
+        <AnalyticsMetric label="Booked hours" value={bookedHours.toFixed(bookedHours % 1 === 0 ? 0 : 1)} />
+        <AnalyticsMetric label="Cash received" value={received.toFixed(2)} />
+        <AnalyticsMetric label="Outstanding" value={outstanding.toFixed(2)} />
+        <AnalyticsMetric label="Registered players" value={String(playersCount)} />
+        <AnalyticsMetric label="Cancelled / expired" value={String(cancelledCount)} />
+      </View>
+
+      <View style={styles.analyticsSection}>
+        <Text style={styles.analyticsSectionTitle}>Reservation types</Text>
+        <AnalyticsBar label="Private" max={largestDistributionValue} value={privateCount} />
+        <AnalyticsBar label="Open Court" max={largestDistributionValue} value={openCount} />
+      </View>
+
+      <View style={styles.analyticsSection}>
+        <Text style={styles.analyticsSectionTitle}>Reservation status</Text>
+        <AnalyticsBar label="Confirmed" max={largestDistributionValue} value={confirmedCount} />
+        <AnalyticsBar label="Completed" max={largestDistributionValue} value={completedCount} />
+        <AnalyticsBar label="Cancelled / expired" max={largestDistributionValue} value={cancelledCount} />
+      </View>
+
+      {!reservations.length ? (
+        <EmptyState icon="bar-chart-outline" text="Current-month reservations will populate these analytics." title="No reservation activity this month" />
+      ) : null}
+    </View>
+  );
+}
+
+function AnalyticsMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.analyticsMetric}>
+      <Text style={styles.analyticsMetricValue}>{value}</Text>
+      <Text style={styles.analyticsMetricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function AnalyticsBar({ label, max, value }: { label: string; max: number; value: number }) {
+  return (
+    <View style={styles.analyticsBarRow}>
+      <View style={styles.analyticsBarHeading}>
+        <Text style={styles.analyticsBarLabel}>{label}</Text>
+        <Text style={styles.analyticsBarValue}>{value}</Text>
+      </View>
+      <View style={styles.analyticsBarTrack}>
+        <View style={[styles.analyticsBarFill, { width: `${Math.max(value ? 8 : 0, value / max * 100)}%` }]} />
+      </View>
     </View>
   );
 }
@@ -894,12 +1070,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 3,
   },
-  dayControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
   statsGrid: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -932,6 +1102,99 @@ const styles = StyleSheet.create({
   },
   panelStack: {
     gap: 18,
+  },
+  calendarCard: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    marginHorizontal: -6,
+    paddingHorizontal: 13,
+    paddingTop: 16,
+    paddingBottom: 14,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.07,
+    shadowRadius: 17,
+    elevation: 3,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  calendarTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  calendarRangeNote: {
+    color: colors.muted,
+    fontSize: 11,
+  },
+  calendarWeekdays: {
+    flexDirection: 'row',
+  },
+  calendarWeekday: {
+    width: '14.2857%',
+    paddingTop: 2,
+    paddingBottom: 5,
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDaySlot: {
+    width: '14.2857%',
+    paddingHorizontal: 1.5,
+    paddingVertical: 1.5,
+  },
+  calendarDay: {
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  calendarDayToday: {
+    borderColor: colors.accent,
+  },
+  calendarDaySelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  calendarDayPressed: {
+    backgroundColor: colors.paleAccent,
+  },
+  calendarDayText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  calendarDayTextDisabled: {
+    color: colors.muted,
+    opacity: 0.36,
+  },
+  calendarDayTextNextMonth: {
+    color: colors.accent,
+    opacity: 0.72,
+  },
+  calendarDayTextToday: {
+    color: colors.accent,
+    fontWeight: '800',
+  },
+  calendarDayTextSelected: {
+    color: colors.white,
+    fontWeight: '800',
   },
   sectionHeading: {
     borderBottomWidth: 1,
@@ -1198,5 +1461,73 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 20,
     fontWeight: '900',
+  },
+  analyticsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderColor: colors.border,
+  },
+  analyticsMetric: {
+    width: '50%',
+    minHeight: 104,
+    justifyContent: 'space-between',
+    padding: 14,
+    backgroundColor: colors.white,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  analyticsMetricValue: {
+    color: colors.accent,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -1.2,
+  },
+  analyticsMetricLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  analyticsSection: {
+    gap: 14,
+    paddingTop: 4,
+  },
+  analyticsSectionTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.text,
+    paddingBottom: 10,
+  },
+  analyticsBarRow: {
+    gap: 7,
+  },
+  analyticsBarHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  analyticsBarLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  analyticsBarValue: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  analyticsBarTrack: {
+    height: 9,
+    backgroundColor: colors.border,
+  },
+  analyticsBarFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
   },
 });

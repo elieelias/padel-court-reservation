@@ -39,14 +39,12 @@ export function LoginScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
       <View style={styles.folioRow}>
-        <Text style={styles.folio}>03</Text>
         <Text style={styles.product}>Padel Court Admin</Text>
       </View>
 
       <View style={styles.loginBody}>
         <Text style={styles.eyebrow}>ADMINISTRATOR ACCESS</Text>
         <Text style={styles.title}>Sign in to manage the court.</Text>
-        <Text style={styles.intro}>Only accounts assigned the administrator role can open this application.</Text>
 
         <View style={styles.form}>
           <View style={styles.field}>
@@ -152,7 +150,7 @@ const styles = StyleSheet.create({
   folioRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingVertical: 16,
