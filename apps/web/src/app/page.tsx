@@ -1,29 +1,30 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { HeroCourtSimulation } from "@/components/hero-court-simulation";
+import { getTranslator } from "@/lib/i18n-server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { t } = await getTranslator();
   return (
     <div className="landing-page">
       <section className="hero landing-hero">
         <div className="hero__copy">
-          <span className="eyebrow">Padel, made simple</span>
-          <h1>Find the time.<br />Play the match.</h1>
-          <p>Book the court for your group or open the match to players looking for their next game.</p>
+          <h1>{t("landing.titleLine1")}<br />{t("landing.titleLine2")}</h1>
+          <p>{t("landing.description")}</p>
           <div className="button-row">
-            <Link className="button button--primary" href="/auth/sign-up">Join and book <ArrowRight aria-hidden="true" size={18} /></Link>
-            <Link className="button button--secondary" href="/auth/sign-in">Sign in</Link>
+            <Link className="button button--primary" href="/auth/sign-up">{t("landing.joinBook")} <ArrowRight className="directional-icon" aria-hidden="true" size={18} /></Link>
+            <Link className="button button--secondary" href="/auth/sign-in">{t("common.signIn")}</Link>
           </div>
         </div>
         <HeroCourtSimulation />
       </section>
 
       <section className="steps-section landing-steps">
-        <div><span className="eyebrow">How it works</span><h2>One account for every match</h2><p>Keep booking, player requests, and your match history together.</p></div>
+        <div><h2>{t("landing.stepsTitle")}</h2><p>{t("landing.stepsDescription")}</p></div>
         <ol className="steps-list">
-          <li><strong>01</strong><span><b>Join with your email</b>Register with your name and email address.</span></li>
-          <li><strong>02</strong><span><b>Choose how to play</b>Book for your group or create an Open Court.</span></li>
-          <li><strong>03</strong><span><b>Keep track</b>See upcoming reservations and match history in your profile.</span></li>
+          <li><strong>01</strong><span><b>{t("landing.step1Title")}</b>{t("landing.step1Text")}</span></li>
+          <li><strong>02</strong><span><b>{t("landing.step2Title")}</b>{t("landing.step2Text")}</span></li>
+          <li><strong>03</strong><span><b>{t("landing.step3Title")}</b>{t("landing.step3Text")}</span></li>
         </ol>
       </section>
     </div>

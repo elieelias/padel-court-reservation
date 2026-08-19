@@ -5,23 +5,32 @@ import "@fontsource/epilogue/700.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
-import { facilityName } from "@/lib/config";
+import { LanguageProvider } from "@/components/language-provider";
+import { appName } from "@/lib/config";
+import { localeDirection } from "@/lib/i18n";
+import { getTranslator } from "@/lib/i18n-server";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    default: `${facilityName} reservations`,
-    template: `%s · ${facilityName}`,
-  },
-  description: "Reserve the court or find players through an Open Court.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslator();
+  return {
+    title: {
+      default: `${appName} · ${t("common.reservations")}`,
+      template: `%s · ${appName}`,
+    },
+    description: t("metadata.description"),
+  };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const { locale, t } = await getTranslator();
   return (
-    <html lang="en">
+    <html data-scroll-behavior="smooth" dir={localeDirection(locale)} lang={locale} suppressHydrationWarning>
       <body>
-        <a className="skip-link" href="#main-content">Skip to content</a>
-        <AppShell>{children}</AppShell>
+        <LanguageProvider initialLocale={locale}>
+          <a className="skip-link" href="#main-content">{t("common.skipContent")}</a>
+          <AppShell>{children}</AppShell>
+        </LanguageProvider>
       </body>
     </html>
   );

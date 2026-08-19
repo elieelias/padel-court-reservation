@@ -1,13 +1,18 @@
 import { PageHeading } from "@/components/page-heading";
-import { SetupState } from "@/components/setup-state";
+import { OpenCourtsBoard } from "@/components/open-courts-board";
+import { getTranslator } from "@/lib/i18n-server";
 
-export const metadata = { title: "Open Courts" };
+export async function generateMetadata() {
+  const { t } = await getTranslator();
+  return { title: t("metadata.openCourts") };
+}
 
-export default function OpenCourtsPage() {
+export default async function OpenCourtsPage() {
+  const { t } = await getTranslator();
   return (
     <div className="page-stack">
-      <PageHeading eyebrow="Open Courts" title="Find your next match">Browse upcoming matches that still have a place, then send the host a request to join.</PageHeading>
-      {/* <SetupState context="open-courts" /> */}
+      <PageHeading eyebrow={t("openCourts.eyebrow")} title={t("openCourts.title")}>{t("openCourts.description")}</PageHeading>
+      <OpenCourtsBoard />
     </div>
   );
 }

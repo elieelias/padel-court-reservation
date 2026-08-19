@@ -1,3 +1,6 @@
+export const appName =
+  process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Padel One";
+
 export const facilityName =
   process.env.NEXT_PUBLIC_FACILITY_NAME?.trim() || "Padel Court";
 
@@ -13,3 +16,6 @@ export const hasSupabaseConfig = Boolean(
 
 export const emailVerificationCodeEnabled =
   process.env.NEXT_PUBLIC_EMAIL_VERIFICATION_CODE_ENABLED === "true";
+
+export const defaultCountryCode =
+  process.env.NEXT_PUBLIC_DEFAULT_COUNTRY_CODE?.trim() || "+961";

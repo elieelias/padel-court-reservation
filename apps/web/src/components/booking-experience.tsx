@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { CalendarDays, CheckCircle2, Clock3, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { CalendarDays, Check, CheckCircle2, Clock3, Users, X } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/components/language-provider";
 import { facilityName } from "@/lib/config";
+import { intlLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 
 type CourtSlot = { id: string; start: number; end: number };
@@ -12,6 +14,8 @@ type DragState = TimeSelection & { pointerId: number; anchorMinutes: number };
 type ConfirmationState = "idle" | "saving" | "success" | "error";
 type AvailabilityState = "loading" | "ready" | "error";
 type AvailabilityRow = { start_at: string; end_at: string };
+type CalendarBlockRow = AvailabilityRow & { block_type: "reserved" | "maintenance" };
+type FriendRow = { player_id: string; username: string; status: "pending" | "accepted" | "rejected"; direction: string };
 
 const hourHeight = 64;
 const openingHour = 16;
@@ -21,7 +25,6 @@ const minimumReservationMinutes = 60;
 const totalOpenMinutes = (closingHour - openingHour) * 60;
 const calendarHeight = (closingHour - openingHour) * hourHeight;
 const timeLabels = Array.from({ length: closingHour - openingHour + 1 }, (_, index) => openingHour + index);
-const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"];
 const facilityTimeZone = "Asia/Beirut";
 
 function addDays(date: Date, amount: number) {
@@ -52,18 +55,15 @@ function databaseDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function formatHour(hour: number) {
-  if (hour === 12) return "12 PM";
-  if (hour > 12) return `${hour - 12} PM`;
-  return `${hour} AM`;
+function formatHour(hour: number, locale: Locale) {
+  return new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric" }).format(new Date(2026, 0, 1, hour));
 }
 
-function formatSelectionTime(relativeMinutes: number) {
+function formatSelectionTime(relativeMinutes: number, locale: Locale) {
   const minutesSinceMidnight = openingHour * 60 + relativeMinutes;
   const hour = Math.floor(minutesSinceMidnight / 60);
   const minute = minutesSinceMidnight % 60;
-  const period = hour >= 12 ? "PM" : "AM";
-  return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${period}`;
+  return new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", minute: "2-digit" }).format(new Date(2026, 0, 1, hour, minute));
 }
 
 function facilityMinutes(isoValue: string) {
@@ -78,21 +78,6 @@ function facilityMinutes(isoValue: string) {
   return (hour - openingHour) * 60 + minute;
 }
 
-function unavailableRanges(availableStarts: Set<number>) {
-  const unavailable: CourtSlot[] = [];
-  let rangeStart: number | null = null;
-
-  for (let minute = 0; minute < totalOpenMinutes; minute += snapMinutes) {
-    if (!availableStarts.has(minute) && rangeStart === null) rangeStart = minute;
-    if (availableStarts.has(minute) && rangeStart !== null) {
-      unavailable.push({ id: `${rangeStart}-${minute}`, start: rangeStart, end: minute });
-      rangeStart = null;
-    }
-  }
-  if (rangeStart !== null) unavailable.push({ id: `${rangeStart}-${totalOpenMinutes}`, start: rangeStart, end: totalOpenMinutes });
-  return unavailable;
-}
-
 function selectionStyle(selection: TimeSelection) {
   return {
     top: selection.startMinutes / 60 * hourHeight,
@@ -101,6 +86,7 @@ function selectionStyle(selection: TimeSelection) {
 }
 
 export function BookingExperience() {
+  const { locale, t } = useLanguage();
   const today = useMemo(() => {
     const value = new Date();
     value.setHours(0, 0, 0, 0);
@@ -112,42 +98,81 @@ export function BookingExperience() {
     const dayCount = Math.round((bookingLimit.getTime() - firstCell.getTime()) / 86_400_000) + 1;
     return Array.from({ length: dayCount }, (_, index) => addDays(firstCell, index));
   }, [bookingLimit, today]);
+  const weekdayLabels = useMemo(() => Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(intlLocale(locale), { weekday: "narrow" }).format(addDays(startOfWeek(today), index))), [locale, today]);
   const [focusDate, setFocusDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState<TimeSelection | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [calendarMessage, setCalendarMessage] = useState("");
   const [availableStarts, setAvailableStarts] = useState<Set<number>>(new Set());
+  const [calendarBlocks, setCalendarBlocks] = useState<CalendarBlockRow[]>([]);
   const [availabilityState, setAvailabilityState] = useState<AvailabilityState>("loading");
   const [availabilityVersion, setAvailabilityVersion] = useState(0);
   const [openCourt, setOpenCourt] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState(1);
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>("idle");
   const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [friends, setFriends] = useState<FriendRow[]>([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const dragFrame = useRef<number | null>(null);
+  const pendingDragMinutes = useRef<number | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTime || openCourt) return;
+    let active = true;
+    void createClient().rpc("list_friendships").then(({ data }) => {
+      if (!active) return;
+      setFriends(((data as FriendRow[] | null) ?? []).filter((item) => item.status === "accepted"));
+      setFriendsLoading(false);
+    });
+    return () => { active = false; };
+  }, [openCourt, selectedTime]);
 
   useEffect(() => {
     let active = true;
-    void createClient().rpc("get_available_slots", { p_date: databaseDate(focusDate) }).then(({ data, error }) => {
+    const supabase = createClient();
+    void Promise.all([
+      supabase.rpc("get_available_slots", { p_date: databaseDate(focusDate) }),
+      supabase.rpc("get_calendar_blocks", { p_date: databaseDate(focusDate) }),
+    ]).then(([slotsResult, blocksResult]) => {
       if (!active) return;
-      if (error) {
+      if (slotsResult.error || blocksResult.error) {
         setAvailableStarts(new Set());
+        setCalendarBlocks([]);
         setAvailabilityState("error");
-        setCalendarMessage("Availability could not be loaded. Please refresh and try again.");
+        setCalendarMessage(t("booking.availabilityError"));
         return;
       }
-      const starts = new Set((data as AvailabilityRow[] | null)?.map((slot) => facilityMinutes(slot.start_at)) ?? []);
+      const starts = new Set((slotsResult.data as AvailabilityRow[] | null)?.map((slot) => facilityMinutes(slot.start_at)) ?? []);
       setAvailableStarts(starts);
+      setCalendarBlocks((blocksResult.data as CalendarBlockRow[] | null) ?? []);
       setAvailabilityState("ready");
     });
 
     return () => { active = false; };
-  }, [availabilityVersion, focusDate]);
+  }, [availabilityVersion, focusDate, t]);
 
-  const bookedSlots = useMemo(
-    () => availabilityState === "ready" ? unavailableRanges(availableStarts) : [],
-    [availabilityState, availableStarts],
-  );
-  const rangeLabel = `${new Intl.DateTimeFormat("en", { month: "long", day: "numeric" }).format(today)} – ${new Intl.DateTimeFormat("en", { month: "long", day: "numeric" }).format(bookingLimit)}`;
-  const selectedDateLabel = new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" }).format(focusDate);
+  const displayBlocks = useMemo(() => calendarBlocks.map((block, index) => ({
+    id: `${block.block_type}-${block.start_at}-${index}`,
+    kind: block.block_type,
+    start: Math.max(0, facilityMinutes(block.start_at)),
+    end: Math.min(totalOpenMinutes, facilityMinutes(block.end_at)),
+  })).filter((block) => block.end > block.start), [calendarBlocks]);
+  const pastSlot = useMemo<CourtSlot | null>(() => {
+    if (dateKey(focusDate) !== dateKey(today)) return null;
+    const now = new Date(currentTime);
+    const minutes = (now.getHours() - openingHour) * 60 + now.getMinutes();
+    const end = Math.min(totalOpenMinutes, Math.max(0, Math.ceil(minutes / snapMinutes) * snapMinutes));
+    return end > 0 ? { id: "past", start: 0, end } : null;
+  }, [currentTime, focusDate, today]);
+  const rangeLabel = `${new Intl.DateTimeFormat(intlLocale(locale), { month: "long", day: "numeric" }).format(today)} – ${new Intl.DateTimeFormat(intlLocale(locale), { month: "long", day: "numeric" }).format(bookingLimit)}`;
+  const selectedDateLabel = new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", month: "long", day: "numeric" }).format(focusDate);
   const activeSelection = drag ?? selectedTime;
 
   function isRangeAvailable(selection: TimeSelection) {
@@ -168,6 +193,7 @@ export function BookingExperience() {
     setExistingPlayers(1);
     setConfirmationState("idle");
     setConfirmationMessage("");
+    setSelectedFriendIds([]);
   }
 
   function dismissConfirmation() {
@@ -176,6 +202,7 @@ export function BookingExperience() {
     setExistingPlayers(1);
     setConfirmationState("idle");
     setConfirmationMessage("");
+    setSelectedFriendIds([]);
   }
 
   async function confirmReservation() {
@@ -187,7 +214,7 @@ export function BookingExperience() {
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) {
       setConfirmationState("error");
-      setConfirmationMessage("Please sign in again before confirming this reservation.");
+      setConfirmationMessage(t("booking.signInAgain"));
       return;
     }
 
@@ -196,22 +223,28 @@ export function BookingExperience() {
     const endAt = new Date(selectedTime.date);
     endAt.setHours(openingHour + Math.floor(selectedTime.endMinutes / 60), selectedTime.endMinutes % 60, 0, 0);
 
-    const { error } = await supabase.rpc("create_reservation", {
-      p_start_at: startAt.toISOString(),
-      p_end_at: endAt.toISOString(),
-      p_type: openCourt ? "open" : "private",
-      p_initial_player_count: openCourt ? existingPlayers : 1,
-    });
+    const { error } = openCourt
+      ? await supabase.rpc("create_reservation", {
+          p_start_at: startAt.toISOString(),
+          p_end_at: endAt.toISOString(),
+          p_type: "open",
+          p_initial_player_count: existingPlayers,
+        })
+      : await supabase.rpc("create_private_reservation", {
+          p_start_at: startAt.toISOString(),
+          p_end_at: endAt.toISOString(),
+          p_friend_ids: selectedFriendIds,
+        });
 
     if (error) {
       setConfirmationState("error");
-      setConfirmationMessage(error.message || "The reservation could not be confirmed. Please try again.");
+      setConfirmationMessage(locale === "ar" ? t("booking.reserveError") : error.message || t("booking.reserveError"));
       setAvailabilityVersion((value) => value + 1);
       return;
     }
 
     setConfirmationState("success");
-    setConfirmationMessage("Your court is reserved and now appears in your profile.");
+    setConfirmationMessage(t("booking.successMessage"));
     setAvailabilityVersion((value) => value + 1);
   }
 
@@ -219,6 +252,12 @@ export function BookingExperience() {
     setAvailabilityState("loading");
     setFocusDate(date);
     clearSelection();
+  }
+
+  function toggleFriend(playerId: string) {
+    setSelectedFriendIds((current) => current.includes(playerId)
+      ? current.filter((id) => id !== playerId)
+      : current.length < 3 ? [...current, playerId] : current);
   }
 
   function pointToMinutes(event: ReactPointerEvent<HTMLDivElement>) {
@@ -243,38 +282,50 @@ export function BookingExperience() {
     if (!event.isPrimary || event.button !== 0) return;
     event.preventDefault();
     if (availabilityState !== "ready") {
-      setCalendarMessage(availabilityState === "loading" ? "Loading availability…" : "Availability is not available right now.");
+      setCalendarMessage(availabilityState === "loading" ? t("booking.loadingAvailability") : t("booking.availabilityUnavailable"));
       return;
     }
     const anchorMinutes = Math.min(pointToMinutes(event), totalOpenMinutes - minimumReservationMinutes);
+    const initialSelection = { date: focusDate, startMinutes: anchorMinutes, endMinutes: anchorMinutes + minimumReservationMinutes };
+    if (!isRangeAvailable(initialSelection)) {
+      setCalendarMessage(t("booking.unavailableSelection"));
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     setSelectedTime(null);
     setCalendarMessage("");
     setConfirmationState("idle");
     setConfirmationMessage("");
     setDrag({
-      date: focusDate,
+      ...initialSelection,
       pointerId: event.pointerId,
       anchorMinutes,
-      startMinutes: anchorMinutes,
-      endMinutes: anchorMinutes + minimumReservationMinutes,
     });
   }
 
   function updateDrag(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drag || drag.pointerId !== event.pointerId) return;
-    const nextSelection = selectionFromPointer(drag.anchorMinutes, pointToMinutes(event));
-    setDrag((current) => current ? { ...current, ...nextSelection } : null);
+    pendingDragMinutes.current = pointToMinutes(event);
+    if (dragFrame.current !== null) return;
+    dragFrame.current = window.requestAnimationFrame(() => {
+      dragFrame.current = null;
+      const nextMinutes = pendingDragMinutes.current;
+      if (nextMinutes === null) return;
+      setDrag((current) => current ? { ...current, ...selectionFromPointer(current.anchorMinutes, nextMinutes) } : null);
+    });
   }
 
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drag || drag.pointerId !== event.pointerId) return;
     const nextSelection = selectionFromPointer(drag.anchorMinutes, pointToMinutes(event));
+    if (dragFrame.current !== null) window.cancelAnimationFrame(dragFrame.current);
+    dragFrame.current = null;
+    pendingDragMinutes.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     setDrag(null);
 
     if (!isRangeAvailable(nextSelection)) {
-      setCalendarMessage("That time is unavailable. Choose a clear one-hour block or longer.");
+      setCalendarMessage(t("booking.unavailableSelection"));
       return;
     }
     setCalendarMessage("");
@@ -282,18 +333,23 @@ export function BookingExperience() {
   }
 
   function cancelDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (drag?.pointerId === event.pointerId) setDrag(null);
+    if (drag?.pointerId === event.pointerId) {
+      if (dragFrame.current !== null) window.cancelAnimationFrame(dragFrame.current);
+      dragFrame.current = null;
+      pendingDragMinutes.current = null;
+      setDrag(null);
+    }
   }
 
   return (
-    <section className="booking-calendar" aria-label="Court availability calendar">
+    <section className="booking-calendar" aria-label={t("booking.calendarLabel")}>
       <header className="booking-calendar__intro">
-        <h1>Book a court</h1>
-        <p>Choose a date, then drag to select your time.</p>
+        <h1>{t("booking.title")}</h1>
+        <p>{t("booking.intro")}</p>
       </header>
 
-      <section className="booking-date-picker" aria-label={`Available dates from ${rangeLabel}`}>
-        <div className="booking-date-picker__title"><strong>{rangeLabel}</strong><span>One month ahead</span></div>
+      <section className="booking-date-picker" aria-label={t("booking.rangeLabel", { range: rangeLabel })}>
+        <div className="booking-date-picker__title"><strong>{rangeLabel}</strong><span>{t("booking.oneMonth")}</span></div>
         <div className="booking-date-picker__weekdays" aria-hidden="true">
           {weekdayLabels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}
         </div>
@@ -305,14 +361,14 @@ export function BookingExperience() {
             const isNextMonth = day.getMonth() !== today.getMonth();
             return (
               <button
-                aria-label={new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" }).format(day)}
+                aria-label={new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", month: "long", day: "numeric" }).format(day)}
                 aria-pressed={isSelected}
                 className={`${isSelected ? "is-selected " : ""}${isToday ? "is-today " : ""}${isNextMonth ? "is-next-month" : ""}`.trim()}
                 disabled={isBeforeToday}
                 key={dateKey(day)}
                 onClick={() => chooseDate(day)}
                 type="button"
-              >{day.getDate()}</button>
+              >{new Intl.NumberFormat(intlLocale(locale), { useGrouping: false }).format(day.getDate())}</button>
             );
           })}
         </div>
@@ -320,16 +376,16 @@ export function BookingExperience() {
 
       <section className="booking-time-section" aria-labelledby="available-times-heading">
         <div className="booking-time-section__heading">
-          <div><h2 id="available-times-heading">Available times</h2><strong>{selectedDateLabel}</strong></div>
-          <span>{availabilityState === "loading" ? "Loading…" : selectedTime ? `${formatSelectionTime(selectedTime.startMinutes)} – ${formatSelectionTime(selectedTime.endMinutes)}` : `${formatHour(openingHour)} – ${formatHour(closingHour)}`}</span>
+          <div><h2 id="available-times-heading">{t("booking.availableTimes")}</h2><strong>{selectedDateLabel}</strong></div>
+          <span>{availabilityState === "loading" ? t("common.loading") : selectedTime ? `${formatSelectionTime(selectedTime.startMinutes, locale)} – ${formatSelectionTime(selectedTime.endMinutes, locale)}` : `${formatHour(openingHour, locale)} – ${formatHour(closingHour, locale)}`}</span>
         </div>
         <div className="booking-time-grid">
           <div className="booking-time-grid__gutter" style={{ height: calendarHeight }}>
-            {timeLabels.map((hour) => <time key={hour} style={{ top: (hour - openingHour) * hourHeight }}>{formatHour(hour)}</time>)}
+            {timeLabels.map((hour) => <time key={hour} style={{ top: (hour - openingHour) * hourHeight }}>{formatHour(hour, locale)}</time>)}
           </div>
           <div
             aria-busy={availabilityState === "loading"}
-            aria-label={`${selectedDateLabel}. Facility open ${formatHour(openingHour)} to ${formatHour(closingHour)}. Drag to select a time.`}
+            aria-label={t("booking.dayLabel", { date: selectedDateLabel, start: formatHour(openingHour, locale), end: formatHour(closingHour, locale) })}
             className="booking-time-grid__day"
             onPointerCancel={cancelDrag}
             onPointerDown={startDrag}
@@ -341,15 +397,16 @@ export function BookingExperience() {
               <i className="booking-time-grid__hour-line" key={`${hour}-hour`} style={{ top: (hour - openingHour) * hourHeight }} />,
               <i className="booking-time-grid__half-hour-line" key={`${hour}-half`} style={{ top: (hour - openingHour + .5) * hourHeight }} />,
             ])}
-            {bookedSlots.map((slot) => (
-              <article className="booking-time-grid__event" key={slot.id} style={{ top: slot.start / 60 * hourHeight, height: (slot.end - slot.start) / 60 * hourHeight }}>
-                <strong>Unavailable</strong><span>{formatSelectionTime(slot.start)}–{formatSelectionTime(slot.end)}</span>
+            {pastSlot && <article className="booking-time-grid__event is-past" style={{ top: 0, height: pastSlot.end / 60 * hourHeight }}><strong>{t("booking.past")}</strong></article>}
+            {displayBlocks.map((slot) => (
+              <article className={`booking-time-grid__event is-${slot.kind}`} key={slot.id} style={{ top: slot.start / 60 * hourHeight, height: (slot.end - slot.start) / 60 * hourHeight }}>
+                <strong>{slot.kind === "reserved" ? t("booking.reserved") : t("booking.maintenance")}</strong><span>{formatSelectionTime(slot.start, locale)}–{formatSelectionTime(slot.end, locale)}</span>
               </article>
             ))}
             {activeSelection && (
               <div className={`booking-time-grid__selection${selectionIsInvalid ? " is-invalid" : ""}`} style={selectionStyle(activeSelection)}>
-                <strong>{selectionIsInvalid ? "Unavailable" : "Selected"}</strong>
-                <span>{formatSelectionTime(activeSelection.startMinutes)} – {formatSelectionTime(activeSelection.endMinutes)}</span>
+                <strong>{selectionIsInvalid ? t("booking.unavailable") : t("booking.selected")}</strong>
+                <span>{formatSelectionTime(activeSelection.startMinutes, locale)} – {formatSelectionTime(activeSelection.endMinutes, locale)}</span>
               </div>
             )}
           </div>
@@ -359,55 +416,69 @@ export function BookingExperience() {
 
       {selectedTime && (
         <>
-          <button className="sheet-backdrop booking-sheet-backdrop is-open" disabled={confirmationState === "saving"} type="button" aria-label="Close booking confirmation" onClick={dismissConfirmation} />
+          <button className="sheet-backdrop booking-sheet-backdrop is-open" disabled={confirmationState === "saving"} type="button" aria-label={t("booking.closeConfirmation")} onClick={dismissConfirmation} />
           <aside className="confirmation-sheet booking-confirmation-sheet is-open" aria-labelledby="confirm-booking-heading">
             <div className="sheet-handle" aria-hidden="true" />
             {confirmationState === "success" ? (
               <div className="booking-confirmation-success">
                 <span className="booking-confirmation-success__icon"><CheckCircle2 aria-hidden="true" size={28} /></span>
-                <div><h2 id="confirm-booking-heading">Reservation confirmed</h2><p>{confirmationMessage}</p></div>
+                <div><h2 id="confirm-booking-heading">{t("booking.successTitle")}</h2><p>{confirmationMessage}</p></div>
                 <div className="confirmation-detail">
                   <div className="confirmation-detail__icon"><CalendarDays aria-hidden="true" size={23} /></div>
-                  <div><strong>{facilityName}</strong><span>{selectedDateLabel}</span><span>{formatSelectionTime(selectedTime.startMinutes)} – {formatSelectionTime(selectedTime.endMinutes)}</span></div>
+                  <div><strong>{facilityName}</strong><span>{selectedDateLabel}</span><span>{formatSelectionTime(selectedTime.startMinutes, locale)} – {formatSelectionTime(selectedTime.endMinutes, locale)}</span></div>
                 </div>
-                <Link className="button button--primary confirmation-action" href="/profile#reservations">View reservation</Link>
-                <button className="button booking-confirmation-sheet__cancel" type="button" onClick={clearSelection}>Done</button>
+                <Link className="button button--primary confirmation-action" href="/book#upcoming-reservations">{t("booking.viewReservation")}</Link>
+                <button className="button booking-confirmation-sheet__cancel" type="button" onClick={clearSelection}>{t("booking.done")}</button>
               </div>
             ) : (
               <>
                 <div className="sheet-heading">
-                  <h2 id="confirm-booking-heading">Confirm Booking</h2>
-                  <button className="sheet-close" disabled={confirmationState === "saving"} type="button" aria-label="Close" onClick={dismissConfirmation}><X aria-hidden="true" size={20} /></button>
+                  <h2 id="confirm-booking-heading">{t("booking.confirmTitle")}</h2>
+                  <button className="sheet-close" disabled={confirmationState === "saving"} type="button" aria-label={t("common.close")} onClick={dismissConfirmation}><X aria-hidden="true" size={20} /></button>
                 </div>
                 <div className="confirmation-detail">
                   <div className="confirmation-detail__icon"><CalendarDays aria-hidden="true" size={23} /></div>
-                  <div><strong>{facilityName}</strong><span>{selectedDateLabel}</span><span>{formatSelectionTime(selectedTime.startMinutes)} – {formatSelectionTime(selectedTime.endMinutes)}</span></div>
+                  <div><strong>{facilityName}</strong><span>{selectedDateLabel}</span><span>{formatSelectionTime(selectedTime.startMinutes, locale)} – {formatSelectionTime(selectedTime.endMinutes, locale)}</span></div>
                 </div>
                 <label className="open-court-toggle">
-                  <span><strong>Open Court</strong><small>Allow other players in the community to join your reservation.</small></span>
-                  <input type="checkbox" checked={openCourt} disabled={confirmationState === "saving"} onChange={(event) => { setOpenCourt(event.target.checked); if (!event.target.checked) setExistingPlayers(1); }} />
+                  <span><strong>{t("booking.openCourt")}</strong><small>{t("booking.openCourtHelp")}</small></span>
+                  <input type="checkbox" checked={openCourt} disabled={confirmationState === "saving"} onChange={(event) => { setOpenCourt(event.target.checked); setSelectedFriendIds([]); if (!event.target.checked) setExistingPlayers(1); }} />
                   <i aria-hidden="true" />
                 </label>
                 {openCourt && (
                   <div className="booking-player-count">
-                    <div><strong>Players already in this reservation</strong><span>{existingPlayers} of 4 players</span></div>
-                    <div className="booking-player-count__options" role="group" aria-label="Players already in this reservation">
+                    <div><strong>{t("booking.playersAlready")}</strong><span>{t("booking.playersOfFour", { count: existingPlayers })}</span></div>
+                    <div className="booking-player-count__options" role="group" aria-label={t("booking.playersAlready")}>
                       {[1, 2, 3].map((count) => <button aria-pressed={existingPlayers === count} className={existingPlayers === count ? "is-selected" : ""} disabled={confirmationState === "saving"} key={count} onClick={() => setExistingPlayers(count)} type="button">{count}</button>)}
                     </div>
                   </div>
                 )}
+                {!openCourt && (
+                  <div className="booking-friend-picker">
+                    <div className="booking-friend-picker__heading"><span><Users aria-hidden="true" size={18} /><strong>{t("booking.addFriends")}</strong></span><small>{t("booking.friendCount", { count: selectedFriendIds.length })}</small></div>
+                    <p>{t("booking.addFriendsHelp")}</p>
+                    {friendsLoading ? <span className="booking-friend-picker__empty">{t("common.loading")}</span> : friends.length ? (
+                      <div className="booking-friend-picker__list">
+                        {friends.map((friend) => {
+                          const selected = selectedFriendIds.includes(friend.player_id);
+                          return <button aria-pressed={selected} className={selected ? "is-selected" : ""} disabled={confirmationState === "saving" || (!selected && selectedFriendIds.length >= 3)} key={friend.player_id} onClick={() => toggleFriend(friend.player_id)} type="button"><span>{friend.username.slice(0, 1).toUpperCase()}</span><strong>@{friend.username}</strong>{selected && <Check aria-hidden="true" size={17} />}</button>;
+                        })}
+                      </div>
+                    ) : <span className="booking-friend-picker__empty">{t("booking.noFriends")} <Link href="/profile">{t("booking.addFriendsLink")}</Link></span>}
+                  </div>
+                )}
                 {confirmationState === "error" && <p className="booking-confirmation-sheet__message" role="alert">{confirmationMessage}</p>}
-                <button className="button button--primary confirmation-action" disabled={confirmationState === "saving" || selectionIsInvalid} onClick={() => void confirmReservation()} type="button">
-                  {confirmationState === "saving" ? "Confirming…" : "Confirm Reservation"}
+                <button className="button button--primary confirmation-action" disabled={confirmationState === "saving" || selectionIsInvalid || (!openCourt && selectedFriendIds.length < 2)} onClick={() => void confirmReservation()} type="button">
+                  {confirmationState === "saving" ? t("booking.confirming") : t("booking.confirm")}
                 </button>
-                <button className="button booking-confirmation-sheet__cancel" disabled={confirmationState === "saving"} type="button" onClick={dismissConfirmation}>Cancel</button>
+                <button className="button booking-confirmation-sheet__cancel" disabled={confirmationState === "saving"} type="button" onClick={dismissConfirmation}>{t("common.cancel")}</button>
               </>
             )}
           </aside>
         </>
       )}
 
-      <div className="booking-calendar__hours-note"><Clock3 aria-hidden="true" size={15} /> Open daily from {formatHour(openingHour)} to {formatHour(closingHour)}</div>
+      <div className="booking-calendar__hours-note"><Clock3 aria-hidden="true" size={15} /> {t("booking.openDaily", { start: formatHour(openingHour, locale), end: formatHour(closingHour, locale) })}</div>
     </section>
   );
 }

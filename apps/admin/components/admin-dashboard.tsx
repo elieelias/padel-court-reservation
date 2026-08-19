@@ -43,12 +43,16 @@ type Reservation = Tables<'reservations'>;
 type BlockedPeriod = Tables<'blocked_periods'>;
 type ScheduleRule = Tables<'schedule_rules'>;
 type FacilitySettings = Tables<'facility_settings'>;
+type FacilityEvent = Tables<'facility_events'>;
+type ReservationParticipant = Tables<'reservation_participants'>;
 type Player = Database['public']['Functions']['admin_list_players']['Returns'][number];
-type TabName = 'schedule' | 'blocked' | 'players' | 'analytics';
+type ParticipantDetail = { player?: Player; role: Database['public']['Enums']['participant_role'] };
+type TabName = 'schedule' | 'blocked' | 'events' | 'players' | 'analytics';
 
 const tabs: { icon: keyof typeof Ionicons.glyphMap; label: string; value: TabName }[] = [
   { icon: 'calendar-outline', label: 'Schedule', value: 'schedule' },
   { icon: 'ban-outline', label: 'Blocked', value: 'blocked' },
+  { icon: 'trophy-outline', label: 'Events', value: 'events' },
   { icon: 'people-outline', label: 'Players', value: 'players' },
   { icon: 'bar-chart-outline', label: 'Analytics', value: 'analytics' },
 ];
@@ -134,8 +138,10 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [analyticsReservations, setAnalyticsReservations] = useState<Reservation[]>([]);
   const [blockedPeriods, setBlockedPeriods] = useState<BlockedPeriod[]>([]);
+  const [facilityEvents, setFacilityEvents] = useState<FacilityEvent[]>([]);
   const [scheduleRules, setScheduleRules] = useState<ScheduleRule[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [reservationParticipants, setReservationParticipants] = useState<ReservationParticipant[]>([]);
   const [settings, setSettings] = useState<FacilitySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -155,16 +161,20 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
     const selectedMonthBounds = monthBounds(selectedDate, timeZone);
     const analyticsMonthBounds = monthBounds(todayKey(timeZone), timeZone);
     const now = new Date().toISOString();
-    const [settingsResult, scheduleResult, reservationsResult, analyticsResult, blocksResult, playersResult] = await Promise.all([
+    const [settingsResult, scheduleResult, reservationsResult, analyticsResult, blocksResult, eventsResult, playersResult] = await Promise.all([
       supabase.from('facility_settings').select('*').eq('id', 1).single(),
       supabase.from('schedule_rules').select('*').order('day_of_week'),
       supabase.from('reservations').select('*').gte('start_at', selectedMonthBounds.start).lt('start_at', selectedMonthBounds.end).order('start_at'),
       supabase.from('reservations').select('*').gte('start_at', analyticsMonthBounds.start).lt('start_at', analyticsMonthBounds.end).order('start_at'),
       supabase.from('blocked_periods').select('*').gt('end_at', now).order('start_at').limit(200),
+      supabase.from('facility_events').select('*').gt('end_at', now).order('start_at').limit(200),
       supabase.rpc('admin_list_players'),
     ]);
 
-    const firstError = settingsResult.error || scheduleResult.error || reservationsResult.error || analyticsResult.error || blocksResult.error || playersResult.error;
+    const participantResult = reservationsResult.data?.length
+      ? await supabase.from('reservation_participants').select('*').in('reservation_id', reservationsResult.data.map((reservation) => reservation.id))
+      : { data: [] as ReservationParticipant[], error: null };
+    const firstError = settingsResult.error || scheduleResult.error || reservationsResult.error || analyticsResult.error || blocksResult.error || eventsResult.error || playersResult.error || participantResult.error;
     if (firstError) {
       setMessage(errorText(firstError, 'Administrator data could not be loaded.'));
     } else {
@@ -173,7 +183,9 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
       setReservations(reservationsResult.data ?? []);
       setAnalyticsReservations(analyticsResult.data ?? []);
       setBlockedPeriods(blocksResult.data ?? []);
+      setFacilityEvents(eventsResult.data ?? []);
       setPlayers(playersResult.data ?? []);
+      setReservationParticipants(participantResult.data ?? []);
     }
     setLoading(false);
     setRefreshing(false);
@@ -317,6 +329,41 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
     ]);
   }
 
+  async function createFacilityEvent(values: FacilityEventValues) {
+    return runAction(
+      'create-event',
+      async () => {
+        const { error } = await supabase.from('facility_events').insert({
+          title: values.title.trim(),
+          description: values.description.trim() || null,
+          event_type: values.eventType,
+          start_at: zonedDateTimeToIso(values.date, values.startTime, timeZone),
+          end_at: zonedDateTimeToIso(values.date, values.endTime, timeZone),
+        });
+        return { error };
+      },
+      'Event published.',
+    );
+  }
+
+  function deleteFacilityEvent(event: FacilityEvent) {
+    Alert.alert('Delete event', 'Remove this event from the player app?', [
+      { text: 'Keep event', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => void runAction(
+          `delete-event-${event.id}`,
+          async () => {
+            const { error } = await supabase.from('facility_events').delete().eq('id', event.id);
+            return { error };
+          },
+          'Event deleted.',
+        ),
+      },
+    ]);
+  }
+
   async function savePlayer(values: PlayerEditValues) {
     const { error } = await supabase.rpc('admin_update_player_profile', {
       p_player_id: values.id,
@@ -393,6 +440,16 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                 timeZone={timeZone}
               />
             ) : null}
+            {activeTab === 'events' ? (
+              <FacilityEventsPanel
+                busy={busyAction}
+                defaultDate={selectedDate}
+                events={facilityEvents}
+                onCreate={createFacilityEvent}
+                onDelete={deleteFacilityEvent}
+                timeZone={timeZone}
+              />
+            ) : null}
             {activeTab === 'players' ? (
               <PlayersPanel onEdit={setEditingPlayer} players={players} />
             ) : null}
@@ -430,6 +487,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
           setEditingReservation(reservation);
         }}
         player={selectedReservation ? playerById.get(selectedReservation.host_id) : undefined}
+        participants={selectedReservation ? reservationParticipants.filter((item) => item.reservation_id === selectedReservation.id).map((item) => ({ player: playerById.get(item.player_id), role: item.role })) : []}
         reservation={selectedReservation}
         timeZone={timeZone}
       />
@@ -601,6 +659,7 @@ function ReservationDetailsModal({
   onConfirmPayment,
   onEdit,
   player,
+  participants,
   reservation,
   timeZone,
 }: {
@@ -610,6 +669,7 @@ function ReservationDetailsModal({
   onConfirmPayment: (reservation: Reservation) => void;
   onEdit: (reservation: Reservation) => void;
   player?: Player;
+  participants: ParticipantDetail[];
   reservation: Reservation | null;
   timeZone: string;
 }) {
@@ -632,7 +692,11 @@ function ReservationDetailsModal({
           <DetailRow label="Phone" value={player?.phone_number || 'Not added'} />
           <DetailRow label="Email" value={player?.email || 'Not available'} />
         </DetailGroup>
+        <DetailGroup title="Players in this reservation">
+          {participants.map((participant, index) => <DetailRow key={`${participant.player?.id || 'unknown'}-${index}`} label={participant.role === 'host' ? 'Host' : `Player ${index + 1}`} value={playerLabel(participant.player)} />)}
+        </DetailGroup>
         <DetailGroup title="Reservation">
+          <DetailRow label="Pass code" value={reservation.pass_code} />
           <DetailRow label="Type" value={titleCase(reservation.type)} />
           <DetailRow label="Price" value={Number(reservation.price).toFixed(2)} />
           <DetailRow label="Players" value={String(reservation.initial_player_count)} />
@@ -845,6 +909,93 @@ function BlockedPeriodsPanel({
             <Text style={styles.cardMeta}>{formatTimeRange(period.start_at, period.end_at, timeZone)} · {period.reason || 'No reason added'}</Text>
           </View>
           <IconButton accessibilityLabel="Remove blocked period" disabled={Boolean(busy)} icon="trash-outline" onPress={() => onDelete(period)} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+type FacilityEventValues = {
+  date: string;
+  startTime: string;
+  endTime: string;
+  title: string;
+  description: string;
+  eventType: Database['public']['Enums']['facility_event_type'];
+};
+
+function FacilityEventsPanel({
+  busy,
+  defaultDate,
+  events,
+  onCreate,
+  onDelete,
+  timeZone,
+}: {
+  busy: string;
+  defaultDate: string;
+  events: FacilityEvent[];
+  onCreate: (values: FacilityEventValues) => Promise<boolean>;
+  onDelete: (event: FacilityEvent) => void;
+  timeZone: string;
+}) {
+  const [values, setValues] = useState<FacilityEventValues>({ date: defaultDate, startTime: '16:00', endTime: '17:00', title: '', description: '', eventType: 'tournament' });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setValues((current) => ({ ...current, date: defaultDate }));
+  }, [defaultDate]);
+
+  async function submit() {
+    if (values.title.trim().length < 3) {
+      setError('Add an event title with at least three characters.');
+      return;
+    }
+    if (!isDateKey(values.date) || !isTime(values.startTime) || !isTime(values.endTime)) {
+      setError('Use YYYY-MM-DD for the date and HH:MM for each time.');
+      return;
+    }
+    const startAt = zonedDateTimeToIso(values.date, values.startTime, timeZone);
+    const endAt = zonedDateTimeToIso(values.date, values.endTime, timeZone);
+    if (startAt <= new Date().toISOString()) {
+      setError('The event must start in the future.');
+      return;
+    }
+    if (endAt <= startAt) {
+      setError('End time must be after start time.');
+      return;
+    }
+    setError('');
+    const success = await onCreate(values);
+    if (success) setValues((current) => ({ ...current, title: '', description: '' }));
+  }
+
+  return (
+    <View style={styles.panelStack}>
+      <SectionHeading eyebrow="Player app" title="Events" />
+      <View style={styles.formCard}>
+        <Text style={styles.formCardTitle}>Publish an event</Text>
+        <Segmented label="Type" onChange={(eventType) => setValues((current) => ({ ...current, eventType: eventType as FacilityEventValues['eventType'] }))} options={[{ label: 'Tournament', value: 'tournament' }, { label: 'Community', value: 'community' }, { label: 'Announcement', value: 'announcement' }]} value={values.eventType} />
+        <Field label="Title" maxLength={120} onChangeText={(title) => setValues((current) => ({ ...current, title }))} placeholder="Event name" value={values.title} />
+        <Field autoCapitalize="none" label="Date (YYYY-MM-DD)" onChangeText={(date) => setValues((current) => ({ ...current, date }))} value={values.date} />
+        <View style={styles.twoColumn}>
+          <View style={styles.flexField}><Field autoCapitalize="none" label="Start (HH:MM)" onChangeText={(startTime) => setValues((current) => ({ ...current, startTime }))} value={values.startTime} /></View>
+          <View style={styles.flexField}><Field autoCapitalize="none" label="End (HH:MM)" onChangeText={(endTime) => setValues((current) => ({ ...current, endTime }))} value={values.endTime} /></View>
+        </View>
+        <Field label="Description (optional)" maxLength={500} multiline onChangeText={(description) => setValues((current) => ({ ...current, description }))} value={values.description} />
+        {error ? <Notice>{error}</Notice> : null}
+        <ActionButton disabled={Boolean(busy)} icon="paper-plane-outline" onPress={() => void submit()}>{busy === 'create-event' ? 'Publishing…' : 'Publish event'}</ActionButton>
+      </View>
+
+      <Text style={styles.listTitle}>Upcoming events</Text>
+      {!events.length ? <EmptyState icon="calendar-outline" text="Tournaments, community activities, and announcements published here appear in the player app." title="No upcoming events" /> : events.map((event) => (
+        <View key={event.id} style={styles.blockCard}>
+          <View style={styles.flexField}>
+            <Text style={styles.cardTitle}>{event.title}</Text>
+            <Text style={styles.cardMeta}>{titleCase(event.event_type)} · {formatDateTime(event.start_at, timeZone)}</Text>
+            <Text style={styles.cardMeta}>{formatTimeRange(event.start_at, event.end_at, timeZone)}{event.description ? ` · ${event.description}` : ''}</Text>
+          </View>
+          <IconButton accessibilityLabel="Delete event" disabled={Boolean(busy)} icon="trash-outline" onPress={() => onDelete(event)} />
         </View>
       ))}
     </View>

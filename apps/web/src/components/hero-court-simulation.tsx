@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/language-provider";
 
 type BallPosition = { x: number; y: number; duration: number };
 
 export function HeroCourtSimulation() {
-  const [ball, setBall] = useState<BallPosition>({ x: 24, y: 32, duration: 1450 });
+  const { t } = useLanguage();
+  const [ball, setBall] = useState<BallPosition>({ x: 24, y: 32, duration: 2800 });
 
   useEffect(() => {
     let active = true;
@@ -15,7 +17,7 @@ export function HeroCourtSimulation() {
     function continueRally() {
       if (!active) return;
       movingToFarSide = !movingToFarSide;
-      const duration = 1300 + Math.round(Math.random() * 700);
+      const duration = 2600 + Math.round(Math.random() * 1000);
       setBall({
         x: 14 + Math.random() * 72,
         y: movingToFarSide ? 61 + Math.random() * 24 : 15 + Math.random() * 24,
@@ -24,7 +26,7 @@ export function HeroCourtSimulation() {
       timer = window.setTimeout(continueRally, duration);
     }
 
-    timer = window.setTimeout(continueRally, 250);
+    timer = window.setTimeout(continueRally, 500);
     return () => {
       active = false;
       window.clearTimeout(timer);
@@ -32,7 +34,7 @@ export function HeroCourtSimulation() {
   }, []);
 
   return (
-    <div className="hero-court-stage" role="img" aria-label="Animated overhead view of a padel rally">
+    <div className="hero-court-stage" role="img" aria-label={t("landing.simulationLabel")}>
       <div className="sim-court">
         <span className="sim-court__center" />
         <span className="sim-court__service sim-court__service--left" />

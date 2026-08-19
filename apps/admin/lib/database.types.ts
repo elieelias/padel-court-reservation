@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      facility_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_at: string
+          event_type: Database["public"]["Enums"]["facility_event_type"]
+          id: string
+          start_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_at: string
+          event_type: Database["public"]["Enums"]["facility_event_type"]
+          id?: string
+          start_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_at?: string
+          event_type?: Database["public"]["Enums"]["facility_event_type"]
+          id?: string
+          start_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       facility_settings: {
         Row: {
           cancellation_hours: number
@@ -246,6 +279,8 @@ export type Database = {
           initial_player_count: number
           payment_confirmed_at: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
+          pass_code: string
+          pass_token: string
           price: number
           start_at: string
           status: Database["public"]["Enums"]["reservation_status"]
@@ -261,6 +296,8 @@ export type Database = {
           initial_player_count?: number
           payment_confirmed_at?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          pass_code?: string
+          pass_token?: string
           price: number
           start_at: string
           status?: Database["public"]["Enums"]["reservation_status"]
@@ -276,6 +313,8 @@ export type Database = {
           initial_player_count?: number
           payment_confirmed_at?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          pass_code?: string
+          pass_token?: string
           price?: number
           start_at?: string
           status?: Database["public"]["Enums"]["reservation_status"]
@@ -392,6 +431,7 @@ export type Database = {
       }
     }
     Enums: {
+      facility_event_type: "tournament" | "community" | "announcement"
       join_request_status: "pending" | "accepted" | "rejected" | "cancelled"
       notification_delivery_status: "pending" | "sent" | "failed"
       notification_event_type:
@@ -540,6 +580,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      facility_event_type: ["tournament", "community", "announcement"],
       join_request_status: ["pending", "accepted", "rejected", "cancelled"],
       notification_delivery_status: ["pending", "sent", "failed"],
       notification_event_type: [
@@ -566,4 +607,3 @@ export const Constants = {
     },
   },
 } as const
-
