@@ -21,10 +21,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isLandingPage = pathname === "/";
   const isBookPage = pathname === "/book";
+  const isProfilePage = pathname === "/profile" || pathname.startsWith("/profile/");
   const isPublicRoute = pathname === "/" || pathname.startsWith("/auth/");
 
   return (
-    <div className={`site-shell${isPublicRoute ? " site-shell--public" : ""}${isBookPage ? " site-shell--calendar" : ""}`}>
+    <div className={`site-shell${isPublicRoute ? " site-shell--public" : ""}${isBookPage ? " site-shell--calendar" : ""}${isProfilePage ? " site-shell--profile" : ""}`}>
       <header className="site-header">
         <Link className="brand" href="/" aria-label={`${appName} ${t("common.home")}`}>
           <CourtMark compact />

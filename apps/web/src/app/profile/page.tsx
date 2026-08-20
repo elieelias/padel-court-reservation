@@ -1,5 +1,4 @@
-import type { User } from "@supabase/supabase-js";
-import { PlayerProfile, type ProfileRow } from "@/components/player-profile";
+import { PlayerProfile, type ProfileRow, type ProfileUser } from "@/components/player-profile";
 import { ProfileSectionNav } from "@/components/profile-section-nav";
 import { hasSupabaseConfig } from "@/lib/config";
 import { getTranslator } from "@/lib/i18n-server";
@@ -12,15 +11,19 @@ export async function generateMetadata() {
 
 export default async function ProfilePage() {
   const { t } = await getTranslator();
-  let initialUser: User | null = null;
+  let initialUser: ProfileUser | null = null;
   let initialProfile: ProfileRow = { username: "", full_name: null, phone_number: null };
   let friendCount = 0;
   let reservationCount = 0;
 
   if (hasSupabaseConfig) {
     const supabase = await createClient();
-    const { data: userData } = await supabase.auth.getUser();
-    initialUser = userData.user;
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const claims = claimsData?.claims;
+    initialUser = claims?.sub ? {
+      id: claims.sub,
+      email: typeof claims.email === "string" ? claims.email : null,
+    } : null;
 
     if (initialUser) {
       const [profileResult, friendshipsResult, reservationResult] = await Promise.all([
@@ -35,7 +38,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack profile-page-stack">
       <header className="profile-page-heading"><h1>{t("profile.profileTab")}</h1></header>
       <ProfileSectionNav active="profile" />
       <PlayerProfile

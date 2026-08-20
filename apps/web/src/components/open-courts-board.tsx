@@ -1,6 +1,8 @@
 "use client";
 
-import { Check, Clock3, RefreshCw, UserRoundPlus, UsersRound, X } from "lucide-react";
+import { Check, ChevronRight, Clock3, LogOut, RefreshCw, UserRoundPlus, UsersRound, X } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { intlLocale } from "@/lib/i18n";
@@ -31,6 +33,7 @@ export function OpenCourtsBoard() {
   const [courts, setCourts] = useState<OpenCourt[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime] = useState(() => Date.now());
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
@@ -73,6 +76,15 @@ export function OpenCourtsBoard() {
     setWorkingId(null);
   }
 
+  async function leaveCourt(reservationId: string) {
+    if (!window.confirm(t("openCourts.leavePrompt"))) return;
+    setWorkingId(reservationId);
+    const { error } = await createClient().rpc("leave_open_court", { p_reservation_id: reservationId });
+    setMessage(error ? (locale === "ar" ? t("openCourts.leaveError") : error.message) : t("openCourts.left"));
+    await refresh();
+    setWorkingId(null);
+  }
+
   return (
     <div className="open-courts-board">
       {message && <p className="open-courts-message" role="status">{message}</p>}
@@ -82,8 +94,10 @@ export function OpenCourtsBoard() {
           <div className="open-court-request-list">
             {requests.map((request) => (
               <article className="open-court-request" key={request.join_request_id}>
-                <span className="friend-avatar">{request.player_username.slice(0, 1).toUpperCase()}</span>
-                <div><strong>@{request.player_username}</strong><small>{formatter.format(new Date(request.start_at))}</small></div>
+                <Link className="friend-profile-link" href={`/players/${encodeURIComponent(request.player_username)}` as Route}>
+                  <span className="friend-avatar">{request.player_username.slice(0, 1).toUpperCase()}</span>
+                  <span><strong>@{request.player_username}</strong><small>{formatter.format(new Date(request.start_at))}</small></span>
+                </Link>
                 <div className="friend-row__actions">
                   <button aria-label={t("openCourts.acceptRequest")} className="friend-icon-button is-accept" disabled={workingId === request.join_request_id} onClick={() => void respond(request.join_request_id, true)} type="button"><Check aria-hidden="true" size={18} /></button>
                   <button aria-label={t("openCourts.declineRequest")} className="friend-icon-button" disabled={workingId === request.join_request_id} onClick={() => void respond(request.join_request_id, false)} type="button"><X aria-hidden="true" size={18} /></button>
@@ -103,8 +117,12 @@ export function OpenCourtsBoard() {
               return (
                 <article className="open-match-card" key={court.reservation_id}>
                   <div className="open-match-card__top"><span className="open-match-card__date">{formatter.format(new Date(court.start_at))}</span><span className="status-chip"><UsersRound aria-hidden="true" size={14} />{t("openCourts.playersOfFour", { count: court.player_count })}</span></div>
-                  <div><h3>{court.is_host ? t("openCourts.yourCourt") : t("openCourts.hostedBy", { username: court.host_username })}</h3><p>{t("openCourts.spotsLeft", { count: court.available_spots })}</p></div>
-                  {court.is_host ? <span className="open-match-card__state">{t("openCourts.waitingForPlayers")}</span> : court.request_status === "pending" ? <span className="open-match-card__state">{t("openCourts.pendingApproval")}</span> : court.request_status === "accepted" ? <span className="open-match-card__state is-accepted">{t("openCourts.joined")}</span> : <button className="button button--primary" disabled={!canRequest || workingId === court.reservation_id} onClick={() => void requestJoin(court.reservation_id)} type="button"><UserRoundPlus aria-hidden="true" size={17} />{t("openCourts.requestToJoin")}</button>}
+                  <div>
+                    <h3>{court.is_host ? t("openCourts.yourCourt") : <Link className="inline-player-link" href={`/players/${encodeURIComponent(court.host_username)}` as Route}>{t("openCourts.hostedBy", { username: court.host_username })}</Link>}</h3>
+                    <p>{t("openCourts.spotsLeft", { count: court.available_spots })}</p>
+                  </div>
+                  <Link className="open-match-card__details" href={`/open-courts/${court.reservation_id}` as Route}>{t("openCourts.viewPlayers")}<ChevronRight aria-hidden="true" className="directional-icon" size={17} /></Link>
+                  {court.is_host ? <span className="open-match-card__state">{t("openCourts.waitingForPlayers")}</span> : court.request_status === "pending" ? <span className="open-match-card__state">{t("openCourts.pendingApproval")}</span> : court.request_status === "accepted" ? <div className="open-match-card__joined"><span className="open-match-card__state is-accepted">{t("openCourts.joined")}</span><button className="open-court-leave" disabled={workingId === court.reservation_id || new Date(court.start_at).getTime() <= currentTime} onClick={() => void leaveCourt(court.reservation_id)} type="button"><LogOut aria-hidden="true" size={16} />{t("openCourts.leave")}</button></div> : <button className="button button--primary" disabled={!canRequest || workingId === court.reservation_id} onClick={() => void requestJoin(court.reservation_id)} type="button"><UserRoundPlus aria-hidden="true" size={17} />{t("openCourts.requestToJoin")}</button>}
                 </article>
               );
             })}

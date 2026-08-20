@@ -1,4 +1,6 @@
-import { CalendarOff, Megaphone, Trophy, UsersRound, type LucideIcon } from "lucide-react";
+import { CalendarOff, ChevronRight, Megaphone, Trophy, UsersRound, type LucideIcon } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { intlLocale, type Locale, type TranslationKey } from "@/lib/i18n";
 import { getTranslator } from "@/lib/i18n-server";
@@ -71,7 +73,7 @@ export default async function EventsPage() {
           const Icon = eventIcons[event.type];
           const date = eventDate(event.startAt, locale);
           return (
-            <article className={`event-card event-card--${event.type}`} key={event.id}>
+            <Link className={`event-card event-card--${event.type}`} href={`/events/${event.id}` as Route} key={event.id}>
               <time className="event-card__date" dateTime={event.startAt}><strong>{date.day}</strong><span>{date.month}</span></time>
               <span className="event-card__icon"><Icon aria-hidden="true" size={20} /></span>
               <div className="event-card__body">
@@ -80,7 +82,8 @@ export default async function EventsPage() {
                 <time dateTime={event.startAt}>{date.full} · {eventTime(event.startAt, event.endAt, locale)}</time>
                 {event.description && <p>{event.description}</p>}
               </div>
-            </article>
+              <span className="event-card__view">{t("events.viewDetails")} <ChevronRight className="directional-icon" aria-hidden="true" size={16} /></span>
+            </Link>
           );
         })}</div> : <div className="events-empty"><CalendarOff aria-hidden="true" size={26} /><strong>{t("events.noEvents")}</strong><span>{t("events.noEventsText")}</span></div>}
       </section>

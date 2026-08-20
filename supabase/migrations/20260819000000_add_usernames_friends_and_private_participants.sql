@@ -304,8 +304,8 @@ begin
   from unnest(coalesce(p_friend_ids, '{}'::uuid[])) friend_id;
   v_friend_count := cardinality(v_friend_ids);
 
-  if v_friend_count < 2 or v_friend_count > 3 then
-    raise exception 'Choose two or three friends for a private reservation.';
+  if v_friend_count > 3 then
+    raise exception 'A private reservation can include no more than four players.';
   end if;
   if v_user_id = any(v_friend_ids) then
     raise exception 'The host cannot be added as a friend.';

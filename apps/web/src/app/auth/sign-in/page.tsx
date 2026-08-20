@@ -1,4 +1,4 @@
-import { ArrowLeft, LockKeyhole } from "lucide-react";
+import { ArrowLeft, LockKeyhole, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 import { EmailAuthForm } from "@/components/email-auth-form";
 import { emailVerificationCodeEnabled, hasSupabaseConfig } from "@/lib/config";
@@ -35,7 +35,12 @@ export default async function SignInPage({
         <p>{emailVerificationCodeEnabled ? t("auth.signInCodeIntro") : t("auth.signInLinkIntro")}</p>
         {errorMessage ? <p className="form-message" role="alert">{errorMessage}</p> : null}
         <EmailAuthForm enabled={hasSupabaseConfig} mode="sign-in" />
-        <p className="auth-switch">{t("auth.newPlayerQuestion")} <Link href="/auth/sign-up">{t("auth.createAccount")}</Link></p>
+        <div className="auth-switch">
+          <span>{t("auth.newPlayerQuestion")}</span>
+          <Link className="auth-switch__button auth-switch__button--signup" href="/auth/sign-up">
+            <UserRoundPlus aria-hidden="true" size={18} /> {t("auth.createAccount")}
+          </Link>
+        </div>
       </section>
     </div>
   );

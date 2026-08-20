@@ -1,19 +1,20 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
 import { CircleUserRound, LogOut, Mail, Pencil, Phone, Save, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { useLanguage } from "@/components/language-provider";
 import { createClient } from "@/lib/supabase/client";
 
 export type ProfileRow = { username: string; full_name: string | null; phone_number: string | null };
+export type ProfileUser = { id: string; email: string | null };
 
 type PlayerProfileProps = {
   enabled: boolean;
-  initialUser: User | null;
+  initialUser: ProfileUser | null;
   initialProfile: ProfileRow;
   friendCount: number;
   reservationCount: number;
@@ -110,12 +111,18 @@ export function PlayerProfile({ enabled, initialUser, initialProfile, friendCoun
               <div><dt><Mail aria-hidden="true" size={17} />{t("profile.email")}</dt><dd>{initialUser.email ?? t("profile.notAvailable")}</dd></div>
               <div><dt><Phone aria-hidden="true" size={17} />{t("profile.phone")}</dt><dd>{profile.phone_number || t("profile.notAdded")}</dd></div>
             </dl>
-            <div className="profile-language-setting"><span>{t("language.label")}</span><LanguageSwitcher /></div>
+            <div className="profile-preferences">
+              <div className="profile-preference-setting"><span>{t("language.label")}</span><LanguageSwitcher /></div>
+              <div className="profile-preference-setting"><span>{t("theme.label")}</span><ThemeSwitcher /></div>
+            </div>
             <button className="button button--primary edit-profile-button" onClick={() => { setEditing(true); setMessage(""); }} type="button"><Pencil aria-hidden="true" size={17} />{t("profile.editProfile")}</button>
           </>
         )}
 
-        {editing && <div className="profile-language-setting"><span>{t("language.label")}</span><LanguageSwitcher /></div>}
+        {editing && <div className="profile-preferences">
+          <div className="profile-preference-setting"><span>{t("language.label")}</span><LanguageSwitcher /></div>
+          <div className="profile-preference-setting"><span>{t("theme.label")}</span><ThemeSwitcher /></div>
+        </div>}
         {message && <p className="profile-message" role="status">{message}</p>}
         {errorMessage && <p className="profile-message profile-message--error" role="alert">{errorMessage}</p>}
         <button className="button button--secondary sign-out-button" onClick={() => void signOut()} type="button"><LogOut aria-hidden="true" size={17} />{t("profile.signOut")}</button>

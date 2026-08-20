@@ -1,7 +1,7 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { CalendarClock, History, QrCode, WalletCards, X } from "lucide-react";
+import { CalendarClock, History, LogOut, QrCode, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -84,6 +84,11 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
           <div><dt>{t("profile.date")}</dt><dd>{reservationDate(reservation.start_at, locale)}</dd></div>
           <div><dt>{t("profile.time")}</dt><dd>{reservationTime(reservation.start_at, reservation.end_at, locale)}</dd></div>
           <div><dt>{t("profile.reservation")}</dt><dd>{reservation.type === "open" ? t("booking.openCourt") : t("profile.privateCourt")}</dd></div>
+          <div><dt>{t("profile.price")}</dt><dd>{priceLabel(reservation.price, locale)}</dd></div>
+          <div>
+            <dt>{t("profile.paymentStatus")}</dt>
+            <dd><span className={`receipt-payment-status receipt-payment-status--${reservation.payment_status}`}>{t(`status.${reservation.payment_status}` as TranslationKey)}</span></dd>
+          </div>
         </dl>
         <p>{t("profile.passInstruction")}</p>
       </section>
@@ -97,6 +102,7 @@ export function UpcomingReservations({ initialReservations, initialUser, cancell
   const [reservations, setReservations] = useState(initialReservations);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [leavingId, setLeavingId] = useState<string | null>(null);
   const [passReservation, setPassReservation] = useState<ReservationRow | null>(null);
   const [message, setMessage] = useState("");
 
@@ -124,11 +130,26 @@ export function UpcomingReservations({ initialReservations, initialUser, cancell
     router.refresh();
   }
 
+  async function leaveOpenCourt(reservation: ReservationRow) {
+    if (leavingId || !window.confirm(t("openCourts.leavePrompt"))) return;
+    setLeavingId(reservation.id);
+    setMessage("");
+    const { error } = await createClient().rpc("leave_open_court", { p_reservation_id: reservation.id });
+    setLeavingId(null);
+    if (error) {
+      setMessage(locale === "ar" ? t("openCourts.leaveError") : error.message || t("openCourts.leaveError"));
+      return;
+    }
+    setReservations((items) => items.filter((item) => item.id !== reservation.id));
+    setMessage(t("openCourts.left"));
+    router.refresh();
+  }
+
   return (
     <section className="panel reservation-list-card book-upcoming-reservations" id="upcoming-reservations">
       <div className="section-heading"><div><span className="eyebrow">{t("profile.upcomingEyebrow")}</span><h2>{t("profile.upcomingTitle")}</h2></div><CalendarClock aria-hidden="true" size={25} /></div>
       {message && <p className="profile-message" role="status">{message}</p>}
-      {reservations.length ? <div className="reservation-list">{reservations.map((reservation) => <ReservationCard action={<div className="reservation-item__actions">{reservation.pass_token && reservation.pass_code ? <button className="reservation-pass-button" onClick={() => setPassReservation(reservation)} type="button"><QrCode aria-hidden="true" size={17} />{t("profile.showPass")}</button> : null}{canCancel(reservation) ? <button className="reservation-cancel" disabled={cancellingId === reservation.id} onClick={() => void cancelReservation(reservation)} type="button">{cancellingId === reservation.id ? t("profile.cancelling") : t("profile.cancelReservation")}</button> : null}</div>} key={reservation.id} reservation={reservation} />)}</div> : <div className="empty-reservation"><strong>{t("profile.noUpcoming")}</strong><span>{t("profile.noUpcomingText")}</span></div>}
+      {reservations.length ? <div className="reservation-list">{reservations.map((reservation) => <ReservationCard action={<div className="reservation-item__actions">{reservation.pass_token && reservation.pass_code ? <button className="reservation-pass-button" onClick={() => setPassReservation(reservation)} type="button"><QrCode aria-hidden="true" size={17} />{t("profile.showPass")}</button> : null}{canCancel(reservation) ? <button className="reservation-cancel" disabled={cancellingId === reservation.id} onClick={() => void cancelReservation(reservation)} type="button">{cancellingId === reservation.id ? t("profile.cancelling") : t("profile.cancelReservation")}</button> : null}{initialUser && reservation.type === "open" && reservation.host_id !== initialUser.id && new Date(reservation.start_at).getTime() > currentTime ? <button className="reservation-leave" disabled={leavingId === reservation.id} onClick={() => void leaveOpenCourt(reservation)} type="button"><LogOut aria-hidden="true" size={16} />{leavingId === reservation.id ? t("openCourts.leaving") : t("openCourts.leave")}</button> : null}</div>} key={reservation.id} reservation={reservation} />)}</div> : <div className="empty-reservation"><strong>{t("profile.noUpcoming")}</strong><span>{t("profile.noUpcomingText")}</span></div>}
       {passReservation ? <ReservationPass onClose={() => setPassReservation(null)} playerName={playerName} reservation={passReservation} /> : null}
     </section>
   );

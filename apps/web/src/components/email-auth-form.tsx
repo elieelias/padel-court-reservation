@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { defaultCountryCode, emailVerificationCodeEnabled, siteUrl } from "@/lib/config";
 import type { TranslationKey } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -68,6 +69,7 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
   const { t } = useLanguage();
   const router = useRouter();
   const [step, setStep] = useState<AuthStep>("details");
+  const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
@@ -80,18 +82,36 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
 
   async function sendCode(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
+    const submittedValues = event ? new FormData(event.currentTarget) : null;
+    const submittedFullName = submittedValues ? String(submittedValues.get("full-name") ?? fullName) : fullName;
+    const submittedUsername = submittedValues ? String(submittedValues.get("username") ?? username) : username;
+    const submittedPhone = submittedValues ? String(submittedValues.get("phone-number") ?? phoneInput) : phoneInput;
+    const submittedEmail = submittedValues ? String(submittedValues.get("email") ?? emailInput) : emailInput;
+
+    // Browser autofill can update the visible controls just before React receives
+    // their change events. Capture the submitted controls so a status re-render
+    // never replaces valid player details with older empty state.
+    setFullName(submittedFullName);
+    setUsername(submittedUsername);
+    setPhoneInput(submittedPhone);
+    setEmailInput(submittedEmail);
     setMessage("");
 
-    const normalizedEmail = normalizeEmail(emailInput);
-    const trimmedUsername = username.trim();
-    const normalizedPhone = normalizePhoneNumber(phoneInput);
+    const normalizedEmail = normalizeEmail(submittedEmail);
+    const trimmedFullName = submittedFullName.trim();
+    const trimmedUsername = submittedUsername.trim();
+    const normalizedPhone = normalizePhoneNumber(submittedPhone);
 
     if (isSignUp) {
+      if (trimmedFullName.length < 2) {
+        setMessage(t("auth.validName"));
+        return;
+      }
       if (!isValidUsername(trimmedUsername)) {
         setMessage(t("auth.validUsername"));
         return;
       }
-      if (!isValidPhoneNumber(phoneInput)) {
+      if (!isValidPhoneNumber(submittedPhone)) {
         setMessage(t("auth.validPhone", { example: `${defaultCountryCode} 70 123 456` }));
         return;
       }
@@ -108,34 +128,42 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
     }
 
     setPending(true);
-    const supabase = createClient();
-    if (isSignUp) {
-      const { data: available, error: availabilityError } = await supabase.rpc("username_available", { p_username: trimmedUsername });
-      if (availabilityError || !available) {
-        setPending(false);
-        setMessage(availabilityError ? t("auth.usernameCheckError") : t("auth.usernameTaken"));
+    try {
+      const supabase = createClient();
+      if (isSignUp) {
+        const { data: available, error: availabilityError } = await supabase.rpc("username_available", { p_username: trimmedUsername });
+        if (availabilityError || !available) {
+          setMessage(availabilityError ? t("auth.usernameCheckError") : t("auth.usernameTaken"));
+          return;
+        }
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: {
+          shouldCreateUser: isSignUp,
+          emailRedirectTo: `${siteUrl}/auth/confirm?next=/book`,
+          ...(isSignUp ? { data: { username: trimmedUsername, full_name: trimmedFullName, phone_number: normalizedPhone } } : {}),
+        },
+      });
+
+      if (error) {
+        setMessage(friendlyAuthError(error.message, t));
         return;
       }
+
+      setEmail(normalizedEmail);
+      setVerificationCode("");
+      setStep(emailVerificationCodeEnabled ? "verify" : "link-sent");
+      requestAnimationFrame(() => {
+        document.getElementById("verification-code")?.focus();
+        document.querySelector(".auth-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    } catch {
+      setMessage(t("auth.sendFailed"));
+    } finally {
+      setPending(false);
     }
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: isSignUp,
-        emailRedirectTo: `${siteUrl}/auth/confirm?next=/book`,
-        ...(isSignUp ? { data: { username: trimmedUsername, full_name: trimmedUsername, phone_number: normalizedPhone } } : {}),
-      },
-    });
-    setPending(false);
-
-    if (error) {
-      setMessage(friendlyAuthError(error.message, t));
-      return;
-    }
-
-    setEmail(normalizedEmail);
-    setVerificationCode("");
-    setStep(emailVerificationCodeEnabled ? "verify" : "link-sent");
   }
 
   async function verifyCode(event: FormEvent<HTMLFormElement>) {
@@ -177,6 +205,7 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
             aria-describedby="verification-help"
             autoComplete="one-time-code"
             className="otp-input"
+            id="verification-code"
             inputMode="numeric"
             maxLength={8}
             name="verification-code"
@@ -230,10 +259,29 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
     <form className="auth-form" onSubmit={sendCode}>
       {isSignUp && (
         <>
-          <div className="auth-language-setting">
-            <span>{t("language.label")}</span>
-            <LanguageSwitcher />
+          <div className="auth-preferences">
+            <div className="auth-preference-setting">
+              <span>{t("language.label")}</span>
+              <LanguageSwitcher />
+            </div>
+            <div className="auth-preference-setting">
+              <span>{t("theme.label")}</span>
+              <ThemeSwitcher />
+            </div>
           </div>
+          <label>
+            {t("auth.fullName")}
+            <input
+              autoComplete="name"
+              maxLength={80}
+              name="full-name"
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder={t("auth.fullNamePlaceholder")}
+              required
+              type="text"
+              value={fullName}
+            />
+          </label>
           <label>
             {t("auth.username")}
             <input
@@ -283,12 +331,12 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
           required
         />
       </label>
+      {message && <p className="form-message" role="alert">{message}</p>}
       <button className="button button--primary" type="submit" disabled={pending}>
         {pending ? t("auth.sending") : emailVerificationCodeEnabled ? t("auth.sendCode") : t("auth.sendLink")}
       </button>
       <p className="form-note">{t("auth.noPassword")}</p>
       {!enabled && <p className="form-note">{t("auth.setupPending")}</p>}
-      {message && <p className="form-message" role="status">{message}</p>}
     </form>
   );
 }

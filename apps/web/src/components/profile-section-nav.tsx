@@ -40,21 +40,25 @@ export function ProfileSectionNav({ active }: { active: ProfileSection }) {
         </button>
       </div>
 
-      <button aria-label={t("profile.closeMenu")} className={`profile-drawer-backdrop${open ? " is-open" : ""}`} onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} type="button" />
-      <aside aria-hidden={!open} aria-label={t("profile.sectionNavigation")} className={`profile-section-drawer${open ? " is-open" : ""}`} id="profile-navigation-drawer">
-        <div className="profile-drawer-heading">
-          <strong>{t("profile.menuTitle")}</strong>
-          <button aria-label={t("profile.closeMenu")} onClick={() => setOpen(false)} type="button"><X aria-hidden="true" size={20} /></button>
-        </div>
-        <nav className="profile-section-nav">
-          {items.map(({ id, href, icon: Icon, label }) => (
-            <Link aria-current={active === id ? "page" : undefined} className={active === id ? "is-active" : ""} href={href} key={id} onClick={() => setOpen(false)} tabIndex={open ? 0 : -1}>
-              <Icon aria-hidden="true" size={19} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-      </aside>
+      {open ? (
+        <>
+          <button aria-label={t("profile.closeMenu")} className="profile-drawer-backdrop is-open" onClick={() => setOpen(false)} type="button" />
+          <aside aria-label={t("profile.sectionNavigation")} className="profile-section-drawer is-open" id="profile-navigation-drawer">
+            <div className="profile-drawer-heading">
+              <strong>{t("profile.menuTitle")}</strong>
+              <button aria-label={t("profile.closeMenu")} onClick={() => setOpen(false)} type="button"><X aria-hidden="true" size={20} /></button>
+            </div>
+            <nav className="profile-section-nav">
+              {items.map(({ id, href, icon: Icon, label }) => (
+                <Link aria-current={active === id ? "page" : undefined} className={active === id ? "is-active" : ""} href={href} key={id} onClick={() => setOpen(false)}>
+                  <Icon aria-hidden="true" size={19} />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </>
+      ) : null}
     </>
   );
 }

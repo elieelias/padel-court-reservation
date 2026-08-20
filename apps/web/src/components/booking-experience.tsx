@@ -455,7 +455,7 @@ export function BookingExperience() {
                 )}
                 {!openCourt && (
                   <div className="booking-friend-picker">
-                    <div className="booking-friend-picker__heading"><span><Users aria-hidden="true" size={18} /><strong>{t("booking.addFriends")}</strong></span><small>{t("booking.friendCount", { count: selectedFriendIds.length })}</small></div>
+                    <div className="booking-friend-picker__heading"><span><Users aria-hidden="true" size={18} /><strong>{t("booking.addFriends")}</strong></span><small>{t("booking.playersOfFour", { count: selectedFriendIds.length + 1 })}</small></div>
                     <p>{t("booking.addFriendsHelp")}</p>
                     {friendsLoading ? <span className="booking-friend-picker__empty">{t("common.loading")}</span> : friends.length ? (
                       <div className="booking-friend-picker__list">
@@ -464,11 +464,11 @@ export function BookingExperience() {
                           return <button aria-pressed={selected} className={selected ? "is-selected" : ""} disabled={confirmationState === "saving" || (!selected && selectedFriendIds.length >= 3)} key={friend.player_id} onClick={() => toggleFriend(friend.player_id)} type="button"><span>{friend.username.slice(0, 1).toUpperCase()}</span><strong>@{friend.username}</strong>{selected && <Check aria-hidden="true" size={17} />}</button>;
                         })}
                       </div>
-                    ) : <span className="booking-friend-picker__empty">{t("booking.noFriends")} <Link href="/profile">{t("booking.addFriendsLink")}</Link></span>}
+                    ) : <span className="booking-friend-picker__empty">{t("booking.noFriends")} <Link href="/profile/friends">{t("booking.addFriendsLink")}</Link></span>}
                   </div>
                 )}
                 {confirmationState === "error" && <p className="booking-confirmation-sheet__message" role="alert">{confirmationMessage}</p>}
-                <button className="button button--primary confirmation-action" disabled={confirmationState === "saving" || selectionIsInvalid || (!openCourt && selectedFriendIds.length < 2)} onClick={() => void confirmReservation()} type="button">
+                <button className="button button--primary confirmation-action" disabled={confirmationState === "saving" || selectionIsInvalid} onClick={() => void confirmReservation()} type="button">
                   {confirmationState === "saving" ? t("booking.confirming") : t("booking.confirm")}
                 </button>
                 <button className="button booking-confirmation-sheet__cancel" disabled={confirmationState === "saving"} type="button" onClick={dismissConfirmation}>{t("common.cancel")}</button>

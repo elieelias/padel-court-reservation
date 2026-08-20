@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, CalendarDays, CheckCheck, UserRoundPlus, UsersRound, X } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
@@ -20,7 +21,7 @@ type NotificationRow = {
   reservation_end_at: string | null;
 };
 
-type NotificationTarget = "/profile/friends" | "/open-courts" | "/profile/history" | "/book#upcoming-reservations";
+type NotificationTarget = "/profile/friends" | "/open-courts" | `/open-courts/${string}` | "/profile/history" | "/book#upcoming-reservations";
 
 export function NotificationCenter() {
   const { locale, t } = useLanguage();
@@ -85,6 +86,7 @@ export function NotificationCenter() {
     if (item.event_type === "join_request_created") return { icon: UserRoundPlus, text: t("notifications.openCourtRequest", { name }), href: "/open-courts" };
     if (item.event_type === "join_request_accepted") return { icon: UsersRound, text: t("notifications.openCourtAccepted"), href: "/open-courts" };
     if (item.event_type === "join_request_rejected") return { icon: UsersRound, text: t("notifications.openCourtDeclined"), href: "/open-courts" };
+    if (item.event_type === "participant_removed") return { icon: UsersRound, text: t("notifications.openCourtPlayerLeft", { name }), href: item.reservation_id ? `/open-courts/${item.reservation_id}` : "/open-courts" };
     if (item.event_type === "reservation_cancellation" || item.event_type === "open_court_auto_cancelled") return { icon: CalendarDays, text: t("notifications.reservationCancelled"), href: "/profile/history" };
     return { icon: CalendarDays, text: t("notifications.reservationConfirmed"), href: "/book#upcoming-reservations" };
   }
@@ -114,7 +116,7 @@ export function NotificationCenter() {
               const detail = details(item);
               const Icon = detail.icon;
               return (
-                <Link className={item.read_at ? "notification-item" : "notification-item is-unread"} href={detail.href} key={item.notification_id} onClick={() => { void markRead([item.notification_id]); setOpen(false); }}>
+                <Link className={item.read_at ? "notification-item" : "notification-item is-unread"} href={detail.href as Route} key={item.notification_id} onClick={() => { void markRead([item.notification_id]); setOpen(false); }}>
                   <span className="notification-item__icon"><Icon aria-hidden="true" size={18} /></span>
                   <span><strong>{detail.text}</strong><small>{formatTime(item)}</small></span>
                   {!item.read_at && <i aria-hidden="true" />}

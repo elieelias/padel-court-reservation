@@ -10,6 +10,7 @@ create function public.username_available(p_username text)
 returns boolean
 language sql
 stable
+security definer
 set search_path = ''
 as $function$ select private.username_available(p_username); $function$;
 
