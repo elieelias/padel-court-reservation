@@ -14,11 +14,13 @@ export default function IndexScreen() {
   const [accessState, setAccessState] = useState<AccessState>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [administratorName, setAdministratorName] = useState<string | null>(null);
+  const [isMainAdministrator, setIsMainAdministrator] = useState(false);
 
   const verifyAccess = useCallback(async (nextUser: User | null) => {
     if (!nextUser) {
       setUser(null);
       setAdministratorName(null);
+      setIsMainAdministrator(false);
       setAccessState('signed-out');
       return;
     }
@@ -27,17 +29,19 @@ export default function IndexScreen() {
     setAccessState('loading');
     const { data, error } = await supabase
       .from('profiles')
-      .select('full_name, role')
+      .select('full_name, is_main_administrator, role')
       .eq('id', nextUser.id)
       .single();
 
     if (error || data?.role !== 'administrator') {
       setAdministratorName(null);
+      setIsMainAdministrator(false);
       setAccessState('denied');
       return;
     }
 
     setAdministratorName(data.full_name);
+    setIsMainAdministrator(data.is_main_administrator);
     setAccessState('administrator');
   }, []);
 
@@ -67,7 +71,7 @@ export default function IndexScreen() {
   else if (accessState === 'loading') content = <LoadingScreen />;
   else if (accessState === 'signed-out') content = <LoginScreen />;
   else if (accessState === 'denied') content = <AccessDeniedScreen email={user?.email} />;
-  else content = <AdminDashboard administratorName={administratorName} />;
+  else content = <AdminDashboard administratorName={administratorName} isMainAdministrator={isMainAdministrator} />;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>

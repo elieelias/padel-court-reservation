@@ -87,6 +87,7 @@ export function NotificationCenter() {
     if (item.event_type === "join_request_accepted") return { icon: UsersRound, text: t("notifications.openCourtAccepted"), href: "/open-courts" };
     if (item.event_type === "join_request_rejected") return { icon: UsersRound, text: t("notifications.openCourtDeclined"), href: "/open-courts" };
     if (item.event_type === "participant_removed") return { icon: UsersRound, text: t("notifications.openCourtPlayerLeft", { name }), href: item.reservation_id ? `/open-courts/${item.reservation_id}` : "/open-courts" };
+    if (item.event_type === "reservation_cancellation" && item.join_request_id) return { icon: UsersRound, text: t("notifications.openCourtRemoved"), href: "/open-courts" };
     if (item.event_type === "reservation_cancellation" || item.event_type === "open_court_auto_cancelled") return { icon: CalendarDays, text: t("notifications.reservationCancelled"), href: "/profile/history" };
     return { icon: CalendarDays, text: t("notifications.reservationConfirmed"), href: "/book#upcoming-reservations" };
   }

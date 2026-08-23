@@ -41,6 +41,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_account_notifications: {
+        Row: {
+          account_id: string
+          created_at: string
+          event_type: string
+          id: string
+          read_at: string | null
+          recipient_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          read_at?: string | null
+          recipient_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          read_at?: string | null
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_account_notifications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_account_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facility_events: {
         Row: {
           created_at: string
@@ -206,30 +248,69 @@ export type Database = {
           },
         ]
       }
+      player_issue_reports: {
+        Row: {
+          category: string
+          created_at: string
+          details: string
+          id: number
+          locale: string
+          page_path: string | null
+          player_id: string
+          status: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          details: string
+          id?: never
+          locale?: string
+          page_path?: string | null
+          player_id: string
+          status?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          details?: string
+          id?: never
+          locale?: string
+          page_path?: string | null
+          player_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           full_name: string | null
           id: string
+          is_main_administrator: boolean
           phone_number: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
+          username: string
         }
         Insert: {
           created_at?: string
           full_name?: string | null
           id: string
+          is_main_administrator?: boolean
           phone_number?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
+          username: string
         }
         Update: {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_main_administrator?: boolean
           phone_number?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
+          username?: string
         }
         Relationships: []
       }
@@ -369,6 +450,120 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_administrators: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_main_administrator: boolean
+          phone_number: string | null
+          username: string
+        }[]
+      }
+      admin_list_account_notifications: {
+        Args: never
+        Returns: {
+          account_email: string
+          account_full_name: string | null
+          account_id: string
+          account_role: Database["public"]["Enums"]["user_role"]
+          account_username: string
+          created_at: string
+          event_type: string
+          notification_id: string
+          read_at: string | null
+        }[]
+      }
+      admin_mark_account_notifications_read: {
+        Args: { p_notification_ids?: string[] | null }
+        Returns: number
+      }
+      admin_list_open_court_requests: {
+        Args: { p_reservation_id: string }
+        Returns: {
+          decided_at: string | null
+          join_request_id: string
+          player_email: string
+          player_full_name: string | null
+          player_id: string
+          player_phone_number: string | null
+          player_username: string
+          request_status: Database["public"]["Enums"]["join_request_status"]
+          requested_at: string
+        }[]
+      }
+      admin_list_open_courts: {
+        Args: never
+        Returns: {
+          accepted_count: number
+          available_spots: number
+          end_at: string
+          host_email: string
+          host_full_name: string | null
+          host_id: string
+          host_phone_number: string | null
+          host_username: string
+          initial_player_count: number
+          occupied_spots: number
+          pass_code: string
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          pending_count: number
+          price: number
+          reservation_id: string
+          start_at: string
+        }[]
+      }
+      admin_remove_open_court_participant: {
+        Args: { p_join_request_id: string }
+        Returns: string
+      }
+      admin_respond_open_court_request: {
+        Args: { p_accept: boolean; p_join_request_id: string }
+        Returns: string
+      }
+      admin_search_reservations: {
+        Args: {
+          p_end_at?: string | null
+          p_limit?: number
+          p_offset?: number
+          p_payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          p_search?: string | null
+          p_start_at?: string | null
+          p_status?: Database["public"]["Enums"]["reservation_status"] | null
+          p_type?: Database["public"]["Enums"]["reservation_type"] | null
+        }
+        Returns: {
+          cancelled_at: string | null
+          created_at: string
+          end_at: string
+          host_email: string | null
+          host_full_name: string | null
+          host_id: string
+          host_phone_number: string | null
+          host_username: string
+          initial_player_count: number
+          pass_code: string
+          pass_token: string
+          payment_confirmed_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          price: number
+          reservation_id: string
+          start_at: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          total_count: number
+          type: Database["public"]["Enums"]["reservation_type"]
+          updated_at: string
+        }[]
+      }
+      admin_get_player_details: {
+        Args: { p_player_id: string }
+        Returns: {
+          friend_count: number
+          reservations_played: number
+        }[]
+      }
       admin_cancel_reservation: {
         Args: { p_reservation_id: string }
         Returns: string
@@ -452,7 +647,7 @@ export type Database = {
         | "cancelled"
         | "expired"
       reservation_type: "private" | "open"
-      user_role: "player" | "administrator"
+      user_role: "player" | "administrator" | "deleted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -603,7 +798,7 @@ export const Constants = {
         "expired",
       ],
       reservation_type: ["private", "open"],
-      user_role: ["player", "administrator"],
+      user_role: ["player", "administrator", "deleted"],
     },
   },
 } as const

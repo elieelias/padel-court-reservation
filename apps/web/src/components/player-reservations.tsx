@@ -157,10 +157,11 @@ export function UpcomingReservations({ initialReservations, initialUser, cancell
 
 export function ReservationHistory({ reservations }: { reservations: ReservationRow[] }) {
   const { t } = useLanguage();
+  const visibleReservations = reservations.filter((reservation) => reservation.status !== "cancelled");
   return (
     <section className="panel reservation-list-card profile-history-card">
       <div className="section-heading"><div><span className="eyebrow">{t("profile.historyEyebrow")}</span><h2>{t("profile.historyTitle")}</h2></div><History aria-hidden="true" size={25} /></div>
-      {reservations.length ? <div className="reservation-list">{reservations.map((reservation) => <ReservationCard key={reservation.id} reservation={reservation} showPayment />)}</div> : <div className="empty-reservation"><strong>{t("profile.noHistory")}</strong><span>{t("profile.noHistoryText")}</span><Link className="text-link" href="/book">{t("profile.bookCourt")}</Link></div>}
+      {visibleReservations.length ? <div className="reservation-list">{visibleReservations.map((reservation) => <ReservationCard key={reservation.id} reservation={reservation} showPayment />)}</div> : <div className="empty-reservation"><strong>{t("profile.noHistory")}</strong><span>{t("profile.noHistoryText")}</span><Link className="text-link" href="/book">{t("profile.bookCourt")}</Link></div>}
     </section>
   );
 }

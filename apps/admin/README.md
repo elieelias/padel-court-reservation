@@ -13,6 +13,9 @@ React Native and Expo mobile application for court administrators.
 - Server-recorded cash payment confirmation timestamps
 - Blocked-period creation, listing, and removal
 - Player account search and contact-detail management
+- Upcoming Open Court roster management, including pending and accepted players
+- Persistent notifications when player or administrator accounts are created
+- Main-administrator-only administrator account creation through a protected Edge Function
 
 ## Requirements
 
@@ -47,4 +50,4 @@ pnpm typecheck:admin
 - Enable leaked-password protection in Supabase Auth settings.
 - Confirm the iOS bundle identifier and Android package name before publishing.
 - Configure EAS signing credentials and create App Store / Play Store builds.
-- If administrators must disable or delete Auth identities, implement that later through a protected server or Edge Function; privileged Auth administration is intentionally not exposed in this client.
+- Confirm the designated main administrator before transferring production ownership.

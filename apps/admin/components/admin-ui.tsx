@@ -7,13 +7,12 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   type TextInputProps,
   View,
 } from 'react-native';
 
-import { colors, layout } from '@/constants/admin-theme';
+import { Text, TextInput } from '@/components/branded-text';
+import { colors, layout, radii } from '@/constants/admin-theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -43,7 +42,7 @@ export function ActionButton({
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
       ]}>
-      {icon ? <Ionicons color={variant === 'primary' ? colors.white : colors.accent} name={icon} size={17} /> : null}
+      {icon ? <Ionicons color={variant === 'primary' ? colors.onAccent : colors.accent} name={icon} size={17} /> : null}
       <Text style={[styles.buttonText, variant === 'primary' ? styles.buttonTextPrimary : styles.buttonTextSecondary]}>
         {children}
       </Text>
@@ -190,13 +189,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
+    borderRadius: radii.small,
   },
   buttonPrimary: {
     backgroundColor: colors.accent,
     borderColor: colors.accent,
   },
   buttonSecondary: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderColor: colors.accent,
   },
   buttonQuiet: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   buttonTextPrimary: {
-    color: colors.white,
+    color: colors.onAccent,
   },
   buttonTextSecondary: {
     color: colors.accent,
@@ -227,7 +227,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
+    borderRadius: 22,
   },
   field: {
     gap: 7,
@@ -241,11 +242,12 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     color: colors.text,
     fontSize: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    borderRadius: radii.small,
   },
   inputMultiline: {
     minHeight: 92,
@@ -255,7 +257,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
+    borderRadius: radii.small,
+    overflow: 'hidden',
   },
   segment: {
     flex: 1,
@@ -275,7 +279,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   segmentTextSelected: {
-    color: colors.white,
+    color: colors.onAccent,
   },
   chip: {
     alignSelf: 'flex-start',
@@ -283,7 +287,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
+    borderRadius: radii.small,
   },
   chipEmphasized: {
     borderColor: colors.accent,
@@ -307,6 +312,7 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     backgroundColor: colors.paleAccent,
     padding: 14,
+    borderRadius: radii.small,
   },
   noticeText: {
     flex: 1,

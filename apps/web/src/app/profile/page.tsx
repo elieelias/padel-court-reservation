@@ -29,7 +29,7 @@ export default async function ProfilePage() {
       const [profileResult, friendshipsResult, reservationResult] = await Promise.all([
         supabase.from("profiles").select("username, full_name, phone_number").eq("id", initialUser.id).single(),
         supabase.rpc("list_friendships"),
-        supabase.from("reservations").select("id", { count: "exact", head: true }),
+        supabase.from("reservations").select("id", { count: "exact", head: true }).neq("status", "cancelled"),
       ]);
       initialProfile = (profileResult.data as ProfileRow | null) ?? initialProfile;
       friendCount = ((friendshipsResult.data as { status: string }[] | null) ?? []).filter((friendship) => friendship.status === "accepted").length;

@@ -16,7 +16,7 @@ export default async function ProfileHistoryPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      const { data } = await supabase.from("reservations").select("id, host_id, start_at, end_at, type, status, price, payment_status").in("status", ["completed", "cancelled", "expired"]).order("start_at", { ascending: false });
+      const { data } = await supabase.from("reservations").select("id, host_id, start_at, end_at, type, status, price, payment_status").in("status", ["completed", "expired"]).order("start_at", { ascending: false });
       reservations = (data as ReservationRow[] | null) ?? [];
     }
   }

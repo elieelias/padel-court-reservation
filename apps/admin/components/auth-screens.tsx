@@ -6,13 +6,12 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { ActionButton, Notice } from '@/components/admin-ui';
-import { colors } from '@/constants/admin-theme';
+import { Text, TextInput } from '@/components/branded-text';
+import { colors, radii } from '@/constants/admin-theme';
 import { supabase } from '@/lib/supabase';
 
 export function LoginScreen() {
@@ -146,6 +145,7 @@ export function AccessDeniedScreen({ email }: { email?: string }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   folioRow: {
     flexDirection: 'row',
@@ -211,17 +211,19 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     color: colors.text,
     fontSize: 16,
     paddingHorizontal: 14,
+    borderRadius: radii.small,
   },
   passwordRow: {
     minHeight: 52,
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
+    borderRadius: radii.small,
   },
   passwordInput: {
     flex: 1,
