@@ -5,13 +5,13 @@ import "@fontsource/epilogue/700.css";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
-import { AppShell } from "@/components/app-shell";
-import { LanguageProvider } from "@/components/language-provider";
-import { ThemeProvider, type Theme } from "@/components/theme-provider";
+import { AppShell } from "@/shared/layout/app-shell";
+import { LanguageProvider } from "@/shared/preferences/language-provider";
+import { ThemeProvider, type Theme } from "@/shared/preferences/theme-provider";
 import { appName } from "@/lib/config";
 import { localeDirection } from "@/lib/i18n";
 import { getTranslator } from "@/lib/i18n-server";
-import "./globals.css";
+import "@/stylesheets/app.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getTranslator();

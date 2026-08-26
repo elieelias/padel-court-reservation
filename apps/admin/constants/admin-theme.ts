@@ -1,3 +1,5 @@
+// Defines the shared color, spacing, radius, and layout values used throughout the admin app.
+
 export const colors = {
   accent: '#1478B8',
   background: '#F4F7FA',

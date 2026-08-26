@@ -33,7 +33,7 @@ Deno.serve(async (request) => {
 
   const { data: callerProfile, error: profileError } = await admin
     .from("profiles")
-    .select("role, is_main_administrator")
+    .select("role, is_main_administrator, full_name, username")
     .eq("id", callerData.user.id)
     .maybeSingle();
   if (profileError) return json({ error: "Administrator authorization could not be checked." }, 500);
@@ -118,6 +118,25 @@ Deno.serve(async (request) => {
     .update({ event_type: "administrator_account_created" })
     .eq("account_id", created.user.id)
     .eq("event_type", "player_account_created");
+
+  const { error: auditError } = await admin.from("administrative_audit_log").insert({
+    actor_id: callerData.user.id,
+    actor_name: callerProfile.full_name,
+    actor_username: callerProfile.username,
+    action: "create_administrator",
+    entity_type: "profiles",
+    entity_id: created.user.id,
+    new_values: {
+      id: created.user.id,
+      email: created.user.email,
+      username,
+      full_name: fullName,
+      phone_number: phoneNumber || null,
+      role: "administrator",
+      is_main_administrator: false,
+    },
+  });
+  if (auditError) console.error("Administrator audit entry failed", auditError.message);
 
   return json({
     administrator: {

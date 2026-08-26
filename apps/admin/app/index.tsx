@@ -1,12 +1,13 @@
+// Checks the signed-in user's administrator access and renders the correct starting screen.
+
 import type { User } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AccessDeniedScreen, LoadingScreen, LoginScreen, SetupScreen } from '@/components/auth-screens';
-import { colors, layout } from '@/constants/admin-theme';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { indexStyles as styles } from '@/stylesheets/index.styles';
 
 type AccessState = 'loading' | 'signed-out' | 'administrator' | 'denied';
 
@@ -55,6 +56,7 @@ export default function IndexScreen() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
+      // Defer the profile lookup until Supabase finishes processing the auth event.
       setTimeout(() => {
         if (active) void verifyAccess(session?.user ?? null);
       }, 0);
@@ -79,17 +81,3 @@ export default function IndexScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  authContent: {
-    flex: 1,
-    width: '100%',
-    maxWidth: layout.maxContentWidth,
-    alignSelf: 'center',
-    paddingHorizontal: layout.gutter,
-  },
-});

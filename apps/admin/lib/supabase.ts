@@ -1,3 +1,5 @@
+// Creates the configured Supabase client shared by the administrator mobile app.
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, processLock } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';

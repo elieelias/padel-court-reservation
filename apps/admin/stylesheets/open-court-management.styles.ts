@@ -1,0 +1,46 @@
+// Styles the open-court list, participant details, and request controls.
+
+import { StyleSheet } from "react-native";
+
+import { colors, layout } from "@/constants/admin-theme";
+
+export const openCourtManagementStyles = StyleSheet.create({
+  scrollContent: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', padding: layout.gutter, paddingBottom: 52 },
+  stack: { gap: 18 },
+  heading: { gap: 7, marginBottom: 4 },
+  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.25, textTransform: 'uppercase' },
+  title: { color: colors.text, fontSize: 29, lineHeight: 32, fontWeight: '900', letterSpacing: -1 },
+  intro: { color: colors.muted, fontSize: 15, lineHeight: 22 },
+  loading: { minHeight: 180, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  courtCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 13 },
+  pressed: { opacity: 0.68 },
+  rowBetween: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  cardHeading: { flex: 1 },
+  cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  muted: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  date: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  ledger: { flexDirection: 'row', gap: 6 },
+  spot: { flex: 1, minWidth: 0, minHeight: 54, borderWidth: 1, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 3 },
+  spotOccupied: { backgroundColor: colors.accent },
+  spotLabel: { color: colors.accent, fontSize: 9, fontWeight: '800' },
+  spotLabelOccupied: { color: colors.onAccent },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  backButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 40 },
+  backText: { color: colors.accent, fontSize: 14, fontWeight: '800' },
+  detailHero: { backgroundColor: colors.paleAccent, borderTopWidth: 3, borderTopColor: colors.accent, padding: 18, gap: 10 },
+  detailTime: { color: colors.accent, fontSize: 35, lineHeight: 38, fontWeight: '900', letterSpacing: -1.3 },
+  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderLeftWidth: 1, borderColor: colors.border },
+  info: { width: '50%', minHeight: 78, borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.border, padding: 11, gap: 5, backgroundColor: colors.surface },
+  infoLabel: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  infoValue: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: '700' },
+  rosterSection: { gap: 10, borderTopWidth: 1, borderTopColor: colors.text, paddingTop: 13 },
+  rosterTitle: { color: colors.text, fontSize: 18, fontWeight: '900' },
+  emptyCopy: { color: colors.muted, fontSize: 14, lineHeight: 20, paddingVertical: 10 },
+  playerCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 9 },
+  playerCopy: { flex: 1 },
+  playerName: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  contact: { color: colors.text, fontSize: 13 },
+  actions: { flexDirection: 'row', gap: 8 },
+  action: { flex: 1 },
+  fullNote: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+});

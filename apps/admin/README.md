@@ -16,6 +16,45 @@ React Native and Expo mobile application for court administrators.
 - Upcoming Open Court roster management, including pending and accepted players
 - Persistent notifications when player or administrator accounts are created
 - Main-administrator-only administrator account creation through a protected Edge Function
+- Reservation discount controls
+- Read-only administrator audit history
+- Email notification queue for account, friend, and reservation events
+
+## Beginner-friendly code map
+
+Start with these files:
+
+- `app/index.tsx` decides whether to show login, access denied, or the administrator app.
+- `components/admin-dashboard.tsx` arranges the main tabs and modals.
+- `hooks/use-admin-dashboard.ts` stores screen state and handles user actions.
+- `lib/admin-data.ts` loads everything needed by the dashboard.
+- `lib/admin-actions.ts` contains every database write made by the dashboard.
+
+Each large feature has its own component:
+
+- `components/schedule-management.tsx` — calendar, schedule, and reservation editing
+- `components/payments-panel.tsx` — payment totals and cash confirmation
+- `components/facility-management.tsx` — blocked periods, events, and reports
+- `components/facility-settings.tsx` — facility information, hours, and pricing
+- `components/player-management.tsx` — player list and profile editing
+- `components/analytics-panel.tsx` — calculations, metrics, and charts
+- `components/audit-history.tsx` — administrator change history
+
+Supporting files:
+
+- `lib/admin-types.ts` contains short names for the database records used by the app.
+- `lib/admin-periods.ts` contains date-range calculations for calendars, payments, and analytics.
+- `lib/date.ts` contains timezone-aware display and input helpers.
+- `lib/database.types.ts` is generated from Supabase. Do not edit it by hand unless the database schema changes.
+- `stylesheets/` contains one named stylesheet for each screen or component that needs styling.
+- `constants/admin-theme.ts` contains the shared colors, spacing, and layout values used by those stylesheets.
+
+When adding a feature, follow this path:
+
+1. Add the Supabase read to `lib/admin-data.ts` or write to `lib/admin-actions.ts`.
+2. Put state and action handling in `hooks/use-admin-dashboard.ts`.
+3. Build the feature UI in its own component.
+4. Connect that component in `components/admin-dashboard.tsx`.
 
 ## Requirements
 

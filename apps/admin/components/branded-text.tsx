@@ -1,3 +1,5 @@
+// Wraps React Native text controls so the app consistently uses its branded font.
+
 import { forwardRef, type ComponentRef } from 'react';
 import {
   StyleSheet,

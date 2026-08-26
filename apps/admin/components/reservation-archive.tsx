@@ -1,6 +1,8 @@
+// Searches historical reservations and opens a selected reservation for review.
+
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { ActionButton, EmptyState, Field, ModalShell, Notice, StatusChip } from '@/components/admin-ui';
 import { Text } from '@/components/branded-text';
@@ -8,6 +10,7 @@ import { colors } from '@/constants/admin-theme';
 import { formatTimeRange, isDateKey, zonedDateTimeToIso } from '@/lib/date';
 import type { Database, Tables } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
+import { reservationArchiveStyles as styles } from '@/stylesheets/reservation-archive.styles';
 
 type Reservation = Tables<'reservations'>;
 type ArchiveRow = Database['public']['Functions']['admin_search_reservations']['Returns'][number];
@@ -54,7 +57,9 @@ function archiveDate(value: string, timeZone: string) {
 }
 
 function rowReservation(row: ArchiveRow): Reservation {
+  // The archive RPC does not return discount fields, so use neutral values for the details screen.
   return {
+    base_price: row.price,
     id: row.reservation_id,
     host_id: row.host_id,
     start_at: row.start_at,
@@ -67,9 +72,14 @@ function rowReservation(row: ArchiveRow): Reservation {
     payment_confirmed_at: row.payment_confirmed_at,
     cancelled_at: row.cancelled_at,
     created_at: row.created_at,
+    discount_amount: 0,
+    discount_name: null,
+    discount_percentage: 0,
     updated_at: row.updated_at,
     pass_token: row.pass_token,
     pass_code: row.pass_code,
+    series_id: null,
+    series_occurrence: null,
   };
 }
 
@@ -102,12 +112,12 @@ export function ReservationArchiveModal({
     setError('');
 
     const { data, error: searchError } = await supabase.rpc('admin_search_reservations', {
-      p_search: applied.search.trim() || null,
-      p_status: applied.status === 'all' ? null : applied.status,
-      p_payment_status: applied.paymentStatus === 'all' ? null : applied.paymentStatus,
-      p_type: applied.type === 'all' ? null : applied.type,
-      p_start_at: applied.fromDate ? zonedDateTimeToIso(applied.fromDate, '00:00', timeZone) : null,
-      p_end_at: applied.toDate ? zonedDateTimeToIso(nextDateKey(applied.toDate), '00:00', timeZone) : null,
+      p_search: applied.search.trim() || undefined,
+      p_status: applied.status === 'all' ? undefined : applied.status,
+      p_payment_status: applied.paymentStatus === 'all' ? undefined : applied.paymentStatus,
+      p_type: applied.type === 'all' ? undefined : applied.type,
+      p_start_at: applied.fromDate ? zonedDateTimeToIso(applied.fromDate, '00:00', timeZone) : undefined,
+      p_end_at: applied.toDate ? zonedDateTimeToIso(nextDateKey(applied.toDate), '00:00', timeZone) : undefined,
       p_limit: pageSize,
       p_offset: offset,
     });
@@ -276,44 +286,3 @@ function ArchiveCard({ onPress, row, timeZone }: { onPress: () => void; row: Arc
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContent: { paddingVertical: 22, paddingBottom: 48, gap: 20 },
-  archiveIntro: { gap: 5 },
-  archiveTitle: { color: colors.text, fontSize: 26, lineHeight: 30, fontWeight: '900', letterSpacing: -1 },
-  archiveCopy: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  filters: { gap: 16, padding: 15, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  filterGroup: { gap: 7 },
-  filterLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
-  filterOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  filterOption: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 11, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  filterOptionSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  filterOptionText: { color: colors.text, fontSize: 12, fontWeight: '700' },
-  filterOptionTextSelected: { color: colors.onAccent },
-  dateFields: { flexDirection: 'row', gap: 10 },
-  flexField: { flex: 1 },
-  filterActions: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
-  clearButton: { minWidth: 72, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  clearButtonText: { color: colors.accent, fontSize: 14, fontWeight: '800' },
-  resultHeading: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, paddingBottom: 11, borderBottomWidth: 1, borderBottomColor: colors.text },
-  resultCount: { color: colors.text, fontSize: 18, fontWeight: '900', letterSpacing: -0.4 },
-  resultRange: { color: colors.muted, fontSize: 11, fontWeight: '700' },
-  loadingState: { minHeight: 150, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  loadingText: { color: colors.muted, fontSize: 13 },
-  resultList: { borderTopWidth: 1, borderTopColor: colors.border },
-  resultCard: { flexDirection: 'row', minHeight: 174, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
-  resultCardPressed: { backgroundColor: colors.background },
-  resultDate: { width: 76, alignItems: 'flex-start', paddingTop: 14, paddingHorizontal: 10, borderRightWidth: 1, borderRightColor: colors.border },
-  resultDay: { color: colors.accent, fontSize: 43, lineHeight: 44, fontWeight: '900', letterSpacing: -2.5 },
-  resultMonth: { color: colors.text, fontSize: 11, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' },
-  resultYear: { color: colors.muted, fontSize: 10, fontWeight: '700', marginTop: 2 },
-  resultDetails: { flex: 1, gap: 5, padding: 14 },
-  resultTopLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  resultPlayer: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
-  resultUsername: { color: colors.accent, fontSize: 11, fontWeight: '700' },
-  resultTime: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 2 },
-  resultChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 3 },
-  resultFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginTop: 4 },
-  resultMeta: { flex: 1, color: colors.muted, fontSize: 11, lineHeight: 16 },
-  resultPrice: { color: colors.text, fontSize: 15, fontWeight: '900' },
-});

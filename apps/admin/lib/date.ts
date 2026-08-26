@@ -1,3 +1,5 @@
+// Converts, validates, and formats dates and times in the facility timezone.
+
 const facilityTimeZone = 'Asia/Beirut';
 
 function zonedParts(value: Date, timeZone = facilityTimeZone) {

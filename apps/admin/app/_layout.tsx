@@ -1,3 +1,5 @@
+// Configures the admin app root layout, fonts, splash screen, and navigation defaults.
+
 import {
   Epilogue_400Regular,
   Epilogue_500Medium,

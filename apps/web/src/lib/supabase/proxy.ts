@@ -1,14 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const protectedPaths = ["/book", "/open-courts", "/players", "/profile", "/reservations"];
+function isPublicPath(pathname: string) {
+  return pathname === "/" || pathname.startsWith("/auth/");
+}
+
+function landingPageRedirect(request: NextRequest) {
+  const landingPageUrl = request.nextUrl.clone();
+  landingPageUrl.pathname = "/";
+  landingPageUrl.search = "";
+  return NextResponse.redirect(landingPageUrl);
+}
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const needsAuthentication = !isPublicPath(request.nextUrl.pathname);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return response;
+  if (!url || !key) return needsAuthentication ? landingPageRedirect(request) : response;
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -24,15 +34,9 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const needsAuthentication = protectedPaths.some((path) =>
-    request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`),
-  );
 
   if (needsAuthentication && !data?.claims) {
-    const signInUrl = request.nextUrl.clone();
-    signInUrl.pathname = "/auth/sign-in";
-    signInUrl.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(signInUrl);
+    return landingPageRedirect(request);
   }
 
   return response;

@@ -33,7 +33,7 @@ Deno.serve(async (request) => {
 
   const { data: callerProfile } = await admin
     .from("profiles")
-    .select("role, is_main_administrator")
+    .select("role, is_main_administrator, full_name, username")
     .eq("id", callerData.user.id)
     .maybeSingle();
   if (callerProfile?.role !== "administrator" || !callerProfile.is_main_administrator) {
@@ -51,7 +51,7 @@ Deno.serve(async (request) => {
 
   const { data: player } = await admin
     .from("profiles")
-    .select("id, role")
+    .select("id, role, full_name, phone_number, username")
     .eq("id", playerId)
     .maybeSingle();
   if (!player || player.role !== "player") return json({ error: "Player account not found." }, 404);
@@ -72,6 +72,24 @@ Deno.serve(async (request) => {
     })
     .eq("id", playerId);
   if (profileError) return json({ error: "The login was deleted, but the profile could not be anonymized." }, 500);
+
+  const { error: auditError } = await admin.from("administrative_audit_log").insert({
+    actor_id: callerData.user.id,
+    actor_name: callerProfile.full_name,
+    actor_username: callerProfile.username,
+    action: "delete_player",
+    entity_type: "profiles",
+    entity_id: playerId,
+    old_values: player,
+    new_values: {
+      id: playerId,
+      full_name: null,
+      phone_number: null,
+      role: "deleted",
+      username: anonymizedUsername,
+    },
+  });
+  if (auditError) console.error("Player deletion audit entry failed", auditError.message);
 
   return json({ playerId });
 });
