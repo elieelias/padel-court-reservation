@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { CalendarClock, History, LogOut, QrCode, UserRound, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { intlLocale, type Locale, type TranslationKey } from "@/lib/i18n";
@@ -103,6 +103,7 @@ function ReservationCard({ reservation, showPayment = false, action }: { reserva
 
 function ReservationPass({ playerName, reservation, onClose }: { playerName: string; reservation: ReservationRow; onClose: () => void }) {
   const { locale, t } = useLanguage();
+  const siteOrigin = useSyncExternalStore(subscribeToOrigin, readBrowserOrigin, readServerOrigin);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -113,16 +114,18 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
   }, [onClose]);
 
   if (!reservation.pass_token || !reservation.pass_code) return null;
-  const qrValue = `padel-one:reservation:${reservation.pass_token}`;
+  const qrValue = siteOrigin
+    ? `${siteOrigin}/receipt/${reservation.pass_token}`
+    : `padel-one:reservation:${reservation.pass_token}`;
   const participants = reservation.participants ?? [];
   const guestCount = reservation.unregistered_player_count ?? 0;
 
   return (
     <div className="reservation-pass-backdrop" onClick={onClose} role="presentation">
       <section aria-label={t("profile.reservationPass")} aria-modal="true" className="reservation-pass" onClick={(event) => event.stopPropagation()} role="dialog">
+        <button aria-label={t("common.close")} className="reservation-pass__close" onClick={onClose} type="button"><X aria-hidden="true" size={22} /></button>
         <header className="reservation-pass__header">
           <div><span>{t("profile.reservationPass")}</span><strong>Padel One</strong></div>
-          <button aria-label={t("common.close")} onClick={onClose} type="button"><X aria-hidden="true" size={20} /></button>
         </header>
         <div className="reservation-pass__identity"><span>{t("profile.player")}</span><strong>{playerName}</strong></div>
         <div className="reservation-pass__qr" aria-label={t("profile.qrCode")}>
@@ -168,6 +171,18 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
       </section>
     </div>
   );
+}
+
+function subscribeToOrigin() {
+  return () => undefined;
+}
+
+function readBrowserOrigin() {
+  return window.location.origin;
+}
+
+function readServerOrigin() {
+  return '';
 }
 
 export function UpcomingReservations({ initialReservations, initialUser, cancellationHours, playerName }: { initialReservations: ReservationRow[]; initialUser: User | null; cancellationHours: number; playerName: string }) {

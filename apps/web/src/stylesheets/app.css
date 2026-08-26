@@ -704,11 +704,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .reservation-pass-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; padding: 10px 16px; border: 1px solid var(--primary); border-radius: 999px; background: var(--primary); color: var(--tertiary); font-size: .74rem; font-weight: 700; cursor: pointer; }
 .reservation-pass-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; overflow-y: auto; place-items: center; padding: 20px; background: color-mix(in srgb, var(--neutral) 52%, transparent); backdrop-filter: blur(8px); }
 .reservation-pass { position: relative; display: grid; width: min(100%, 390px); overflow: hidden; border-radius: 30px; background: var(--tertiary); box-shadow: var(--shadow); }
-.reservation-pass__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; background: var(--primary); color: var(--tertiary); }
+.reservation-pass__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 72px 20px 22px; background: var(--primary); color: var(--tertiary); }
 .reservation-pass__header > div { display: grid; gap: 3px; }
 .reservation-pass__header span { font-size: .65rem; font-weight: 650; opacity: .78; }
 .reservation-pass__header strong { font-size: 1.25rem; letter-spacing: -.04em; }
-.reservation-pass__header button { display: grid; width: 38px; aspect-ratio: 1; place-items: center; border: 1px solid color-mix(in srgb, var(--tertiary) 42%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--tertiary) 12%, transparent); color: var(--tertiary); cursor: pointer; }
+.reservation-pass__close { position: absolute; z-index: 2; top: 14px; right: 16px; display: grid; width: 42px; aspect-ratio: 1; place-items: center; border: 2px solid color-mix(in srgb, var(--tertiary) 72%, transparent); border-radius: 50%; background: var(--tertiary); color: var(--primary); box-shadow: 0 5px 18px color-mix(in srgb, var(--neutral) 20%, transparent); cursor: pointer; }
+.reservation-pass__close:hover { transform: scale(1.04); }
+.reservation-pass__close:focus-visible { outline: 3px solid var(--secondary); outline-offset: 3px; }
 .reservation-pass__identity { display: grid; justify-items: center; gap: 5px; padding: 20px 22px 8px; }
 .reservation-pass__identity span, .reservation-pass__code span { color: color-mix(in srgb, var(--neutral) 60%, transparent); font-size: .64rem; font-weight: 700; }
 .reservation-pass__identity strong { font-size: 1.1rem; }
@@ -733,6 +735,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .receipt-payment-status--unpaid { background: color-mix(in srgb, var(--secondary) 13%, var(--tertiary)); color: var(--secondary); }
 .reservation-pass > .calendar-actions { margin: 14px 22px 0; }
 .reservation-pass > p { margin: 0; padding: 18px 22px 22px; color: color-mix(in srgb, var(--neutral) 62%, transparent); font-size: .7rem; line-height: 1.5; text-align: center; }
+
+.receipt-verification { display: grid; min-height: calc(100dvh - 130px); place-items: center; padding: clamp(24px, 6vw, 72px) 20px; }
+.receipt-verification__card { display: grid; width: min(100%, 520px); gap: 16px; padding: clamp(26px, 5vw, 44px); border: 1px solid var(--border); border-radius: 30px; background: var(--tertiary); box-shadow: var(--shadow); }
+.receipt-verification__mark { display: grid; width: 54px; aspect-ratio: 1; place-items: center; border-radius: 50%; background: var(--primary); color: var(--tertiary); }
+.receipt-verification__eyebrow { color: var(--primary); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.receipt-verification h1 { margin: 0; font-size: clamp(2rem, 7vw, 3.5rem); line-height: .98; letter-spacing: -.055em; }
+.receipt-verification p { margin: 0; color: color-mix(in srgb, var(--neutral) 66%, transparent); line-height: 1.65; }
+.receipt-verification dl { display: grid; margin: 4px 0 0; border-top: 1px solid var(--border); }
+.receipt-verification dl div { display: flex; justify-content: space-between; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+.receipt-verification dt { color: color-mix(in srgb, var(--neutral) 58%, transparent); font-size: .78rem; font-weight: 700; }
+.receipt-verification dd { margin: 0; font-size: .82rem; font-weight: 750; text-align: end; }
+.receipt-verification__notice { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: 16px; background: color-mix(in srgb, var(--primary) 9%, var(--tertiary)); color: var(--neutral); font-size: .78rem; font-weight: 650; line-height: 1.5; }
+.receipt-verification__notice svg { flex: 0 0 auto; color: var(--primary); }
 .reservation-item__note { color: color-mix(in srgb, var(--neutral) 60%, transparent); font-size: .66rem; line-height: 1.5; }
 .empty-reservation { display: grid; justify-items: start; gap: 7px; padding: 22px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--neutral) 4%, var(--tertiary)); }
 .empty-reservation span { font-size: .8rem; line-height: 1.55; }

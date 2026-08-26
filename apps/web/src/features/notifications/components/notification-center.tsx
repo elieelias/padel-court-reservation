@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarDays, CheckCheck, ListOrdered, MailCheck, UserRoundPlus, UsersRound, X } from "lucide-react";
+import { BadgePercent, Bell, CalendarDays, CheckCheck, ListOrdered, MailCheck, UserRoundPlus, UsersRound, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,7 +21,7 @@ type NotificationRow = {
   reservation_end_at: string | null;
 };
 
-type NotificationTarget = "/profile/friends" | "/open-courts" | `/open-courts/${string}` | "/profile/history" | "/book" | "/book#upcoming-reservations" | "/book#reservation-invitations";
+type NotificationTarget = "/profile/friends" | "/open-courts" | `/open-courts/${string}` | "/profile/history" | "/book" | "/book#upcoming-reservations" | "/book#reservation-invitations" | "/events";
 
 export function NotificationCenter() {
   const { locale, t } = useLanguage();
@@ -80,6 +80,7 @@ export function NotificationCenter() {
   function details(item: NotificationRow): { icon: typeof CalendarDays; text: string; href: NotificationTarget } {
     const name = item.actor_username ? `@${item.actor_username}` : t("notifications.aPlayer");
     const isFriend = Boolean(item.friendship_id);
+    if (item.event_type === "discount_announcement") return { icon: BadgePercent, text: t("notifications.discountAnnouncement"), href: "/events" };
     if (isFriend && item.event_type === "join_request_created") return { icon: UserRoundPlus, text: t("notifications.friendRequest", { name }), href: "/profile/friends" };
     if (isFriend && item.event_type === "join_request_accepted") return { icon: UsersRound, text: t("notifications.friendAccepted", { name }), href: "/profile/friends" };
     if (isFriend && item.event_type === "join_request_rejected") return { icon: UsersRound, text: t("notifications.friendDeclined", { name }), href: "/profile/friends" };
