@@ -6,6 +6,7 @@ import { Pressable, View } from 'react-native';
 
 import { ActionButton, Field, Notice } from '@/components/admin-ui';
 import { Text } from '@/components/branded-text';
+import { DateWheelField, TimeWheelField } from '@/components/date-time-wheel-field';
 import { colors } from '@/constants/admin-theme';
 import { inputDate, inputTime, isDateKey, isTime, zonedDateTimeToIso } from '@/lib/date';
 import type { Tables } from '@/lib/database.types';
@@ -29,14 +30,12 @@ export function FacilityInformationPanel({
   const [facilityName, setFacilityName] = useState(settings.facility_name);
   const [defaultPrice, setDefaultPrice] = useState(String(settings.default_price));
   const [cancellationHours, setCancellationHours] = useState(String(settings.cancellation_hours));
-  const [timezone, setTimezone] = useState(settings.timezone);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setFacilityName(settings.facility_name);
     setDefaultPrice(String(settings.default_price));
     setCancellationHours(String(settings.cancellation_hours));
-    setTimezone(settings.timezone);
   }, [settings]);
 
   async function submit() {
@@ -54,23 +53,12 @@ export function FacilityInformationPanel({
       setError('Cancellation hours must be a whole number.');
       return;
     }
-    if (!timezone.trim()) {
-      setError('Enter the facility timezone.');
-      return;
-    }
-    try {
-      new Intl.DateTimeFormat('en', { timeZone: timezone.trim() }).format(new Date());
-    } catch {
-      setError('Enter a valid timezone, such as Asia/Beirut.');
-      return;
-    }
-
     setError('');
     await onSave({
       cancellationHours: cancellationWindow,
       defaultPrice: price,
       facilityName: facilityName.trim(),
-      timezone: timezone.trim(),
+      timezone: settings.timezone,
     });
   }
 
@@ -81,7 +69,6 @@ export function FacilityInformationPanel({
       <Field label="Facility name" onChangeText={setFacilityName} value={facilityName} />
       <Field inputMode="decimal" keyboardType="decimal-pad" label="Default reservation price" onChangeText={setDefaultPrice} value={defaultPrice} />
       <Field inputMode="numeric" keyboardType="number-pad" label="Cancellation notice (hours)" onChangeText={setCancellationHours} value={cancellationHours} />
-      <Field autoCapitalize="none" label="Timezone" onChangeText={setTimezone} value={timezone} />
       {error ? <Notice>{error}</Notice> : null}
       <ActionButton disabled={busy} icon="save-outline" onPress={() => void submit()}>
         {busy ? 'Saving…' : 'Save facility information'}
@@ -155,18 +142,16 @@ export function FacilityHoursPanel({
           {rule.is_open ? (
             <View style={styles.dayFields}>
               <View style={styles.flexField}>
-                <Field
+                <TimeWheelField
                   label="Opens"
-                  onChangeText={(value) => updateRule(rule.day_of_week, { opening_time: value })}
-                  placeholder="08:00"
+                  onChange={(value) => updateRule(rule.day_of_week, { opening_time: value })}
                   value={rule.opening_time?.slice(0, 5) || ''}
                 />
               </View>
               <View style={styles.flexField}>
-                <Field
+                <TimeWheelField
                   label="Closes"
-                  onChangeText={(value) => updateRule(rule.day_of_week, { closing_time: value })}
-                  placeholder="22:00"
+                  onChange={(value) => updateRule(rule.day_of_week, { closing_time: value })}
                   value={rule.closing_time?.slice(0, 5) || ''}
                 />
               </View>
@@ -229,6 +214,10 @@ export function FacilityPricingPanel({
 
     const hasStart = Boolean(startsDate || startsTime);
     const hasEnd = Boolean(endsDate || endsTime);
+    if (enabled && (!hasStart || !hasEnd)) {
+      setError('Choose a complete start and end so the discount can be published as an event.');
+      return;
+    }
     if (hasStart && (!isDateKey(startsDate) || !isTime(startsTime))) {
       setError('Enter a complete and valid start date and time, or leave both blank.');
       return;
@@ -290,14 +279,14 @@ export function FacilityPricingPanel({
         <Field label="Discount name" onChangeText={setName} placeholder="Summer offer" value={name} />
         <Field inputMode="decimal" keyboardType="decimal-pad" label="Discount percentage" onChangeText={setPercentage} placeholder="15" value={percentage} />
         <View style={styles.dayFields}>
-          <View style={styles.flexField}><Field label="Starts on (optional)" onChangeText={setStartsDate} placeholder="YYYY-MM-DD" value={startsDate} /></View>
-          <View style={styles.flexField}><Field label="Start time" onChangeText={setStartsTime} placeholder="16:00" value={startsTime} /></View>
+          <View style={styles.flexField}><DateWheelField label="Starts on" onChange={setStartsDate} optional={!enabled} value={startsDate} /></View>
+          <View style={styles.flexField}><TimeWheelField label="Start time" onChange={setStartsTime} optional value={startsTime} /></View>
         </View>
         <View style={styles.dayFields}>
-          <View style={styles.flexField}><Field label="Ends on (optional)" onChangeText={setEndsDate} placeholder="YYYY-MM-DD" value={endsDate} /></View>
-          <View style={styles.flexField}><Field label="End time" onChangeText={setEndsTime} placeholder="22:00" value={endsTime} /></View>
+          <View style={styles.flexField}><DateWheelField label="Ends on" onChange={setEndsDate} optional={!enabled} value={endsDate} /></View>
+          <View style={styles.flexField}><TimeWheelField label="End time" onChange={setEndsTime} optional value={endsTime} /></View>
         </View>
-        <Text style={styles.hint}>Leave both start and end blank to keep the discount active until you turn it off.</Text>
+        <Text style={styles.hint}>Active discounts are posted to Events and announced to every registered player.</Text>
         {error ? <Notice>{error}</Notice> : null}
         <ActionButton disabled={busy} icon="pricetag-outline" onPress={() => void submit()}>
           {busy ? 'Saving…' : 'Save pricing'}

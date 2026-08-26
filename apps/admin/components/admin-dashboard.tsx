@@ -40,6 +40,7 @@ import {
 import { colors } from '@/constants/admin-theme';
 import { useAdminDashboard } from '@/hooks/use-admin-dashboard';
 import {
+  addOneMonth,
   periodLabel as analyticsPeriodLabel,
   periodStart as analyticsPeriodStart,
   shiftPeriod as shiftAnalyticsPeriod,
@@ -172,7 +173,7 @@ export function AdminDashboard({ administratorName, isMainAdministrator }: { adm
             {activeTab === 'payments' ? (
               <PaymentsPanel
                 busyAction={busyAction}
-                canMoveNext={analyticsPeriodStart(paymentDate, paymentPeriod) < analyticsPeriodStart(todayKey(timeZone), paymentPeriod)}
+                canMoveNext={analyticsPeriodStart(paymentDate, paymentPeriod) < analyticsPeriodStart(addOneMonth(todayKey(timeZone)), paymentPeriod)}
                 onChangePeriod={setPaymentPeriod}
                 onMarkPaid={confirmPayment}
                 onMovePeriod={(amount) => setPaymentDate((current) => shiftAnalyticsPeriod(current, paymentPeriod, amount))}

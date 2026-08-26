@@ -7,6 +7,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { scheduleManagementStyles as styles } from '@/stylesheets/schedule-management.styles';
 import { ActionButton, EmptyState, Field, ModalShell, Notice, Segmented, StatusChip } from '@/components/admin-ui';
 import { Text } from '@/components/branded-text';
+import { DateWheelField, TimeWheelField } from '@/components/date-time-wheel-field';
 import { colors } from '@/constants/admin-theme';
 import {
   addDays as addDaysToDateKey,
@@ -334,10 +335,10 @@ export function ReservationEditModal({
   return (
     <ModalShell onClose={onClose} title="Edit reservation" visible>
       <ScrollView contentContainerStyle={styles.formScroll} keyboardShouldPersistTaps="handled">
-        <Field autoCapitalize="none" label="Date (YYYY-MM-DD)" onChangeText={(value) => update('date', value)} value={values.date} />
+        <DateWheelField label="Date" onChange={(value) => update('date', value)} value={values.date} />
         <View style={styles.twoColumn}>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="Start (HH:MM)" onChangeText={(value) => update('startTime', value)} value={values.startTime} /></View>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="End (HH:MM)" onChangeText={(value) => update('endTime', value)} value={values.endTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="Start" onChange={(value) => update('startTime', value)} value={values.startTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="End" onChange={(value) => update('endTime', value)} value={values.endTime} /></View>
         </View>
         <Segmented label="Type" onChange={(value) => update('type', value)} options={[{ label: 'Private', value: 'private' }, { label: 'Open Court', value: 'open' }]} value={values.type} />
         <Segmented label="Status" onChange={(value) => update('status', value)} options={[{ label: 'Pending', value: 'pending' }, { label: 'Confirmed', value: 'confirmed' }, { label: 'Completed', value: 'completed' }]} value={values.status} />

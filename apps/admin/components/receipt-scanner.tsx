@@ -45,6 +45,12 @@ function formatReceiptDate(value: string, timeZone: string) {
   }).format(new Date(value));
 }
 
+function normalizeReceiptValue(value: string) {
+  const trimmed = value.trim();
+  const token = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)?.[0];
+  return token || trimmed;
+}
+
 export function ReceiptScannerModal({
   onClose,
   timeZone,
@@ -75,7 +81,7 @@ export function ReceiptScannerModal({
   }, [visible]);
 
   async function lookupReceipt(receiptValue: string) {
-    const lookupValue = receiptValue.trim();
+    const lookupValue = normalizeReceiptValue(receiptValue);
     if (!lookupValue) {
       setError('Enter the backup code shown on the receipt.');
       return;

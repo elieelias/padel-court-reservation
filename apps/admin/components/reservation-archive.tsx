@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { ActionButton, EmptyState, Field, ModalShell, Notice, StatusChip } from '@/components/admin-ui';
 import { Text } from '@/components/branded-text';
+import { DateWheelField } from '@/components/date-time-wheel-field';
 import { colors } from '@/constants/admin-theme';
 import { formatTimeRange, isDateKey, zonedDateTimeToIso } from '@/lib/date';
 import type { Database, Tables } from '@/lib/database.types';
@@ -203,8 +204,8 @@ export function ReservationArchiveModal({
             value={draft.type}
           />
           <View style={styles.dateFields}>
-            <View style={styles.flexField}><Field autoCapitalize="none" label="From date" onChangeText={(fromDate) => setDraft((current) => ({ ...current, fromDate }))} placeholder="YYYY-MM-DD" value={draft.fromDate} /></View>
-            <View style={styles.flexField}><Field autoCapitalize="none" label="To date" onChangeText={(toDate) => setDraft((current) => ({ ...current, toDate }))} placeholder="YYYY-MM-DD" value={draft.toDate} /></View>
+            <View style={styles.flexField}><DateWheelField label="From date" onChange={(fromDate) => setDraft((current) => ({ ...current, fromDate }))} optional value={draft.fromDate} /></View>
+            <View style={styles.flexField}><DateWheelField label="To date" onChange={(toDate) => setDraft((current) => ({ ...current, toDate }))} optional value={draft.toDate} /></View>
           </View>
           {validationError ? <Notice>{validationError}</Notice> : null}
           <View style={styles.filterActions}>

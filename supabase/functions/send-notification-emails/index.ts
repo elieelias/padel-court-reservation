@@ -1,3 +1,5 @@
+// Sends queued account and reservation notification emails through Resend.
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 
@@ -80,6 +82,7 @@ function messageFor(item: OutboxItem) {
     waitlist_added: { subject: "You joined the waitlist", heading: "You are on the waitlist", body: "You have been added to the reservation waitlist." },
     waitlist_promoted: { subject: "A court place opened", heading: "You can join the court", body: "A place is now available in the open court." },
     court_available: { subject: "Padel court available", heading: "A court is available", body: "A reservation slot you were waiting for is now available." },
+    discount_announcement: { subject: "New padel court discount", heading: "A new offer is available", body: "A new court discount has been published. Open Events to view the offer and its dates." },
   };
   return messages[key] || { subject: "Padel court update", heading: "There is an update", body: "There is a new update concerning your padel court account." };
 }

@@ -6,6 +6,7 @@ import { ScrollView, View } from 'react-native';
 import { facilityManagementStyles as styles } from '@/stylesheets/facility-management.styles';
 import { ActionButton, EmptyState, Field, IconButton, ModalShell, Notice, Segmented, StatusChip } from '@/components/admin-ui';
 import { Text } from '@/components/branded-text';
+import { DateWheelField, TimeWheelField } from '@/components/date-time-wheel-field';
 import { getPlayerName as playerLabel, type BlockedPeriod, type BlockedPeriodValues, type FacilityEvent, type FacilityEventEditValues, type FacilityEventValues, type IssueReport, type IssueReportStatus, type Player } from '@/lib/admin-types';
 import { formatDateTime, formatTimeRange, inputDate, inputTime, isDateKey, isTime, zonedDateTimeToIso } from '@/lib/date';
 import { titleCase } from '@/lib/errors';
@@ -66,10 +67,10 @@ export function BlockedPeriodsPanel({
       <SectionHeading eyebrow="Court availability" title="Blocked periods" />
       <View style={styles.formCard}>
         <Text style={styles.formCardTitle}>Create blocked period</Text>
-        <Field autoCapitalize="none" label="Date (YYYY-MM-DD)" onChangeText={(date) => setValues((current) => ({ ...current, date }))} value={values.date} />
+        <DateWheelField label="Date" onChange={(date) => setValues((current) => ({ ...current, date }))} value={values.date} />
         <View style={styles.twoColumn}>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="Start (HH:MM)" onChangeText={(startTime) => setValues((current) => ({ ...current, startTime }))} value={values.startTime} /></View>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="End (HH:MM)" onChangeText={(endTime) => setValues((current) => ({ ...current, endTime }))} value={values.endTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="Start" onChange={(startTime) => setValues((current) => ({ ...current, startTime }))} value={values.startTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="End" onChange={(endTime) => setValues((current) => ({ ...current, endTime }))} value={values.endTime} /></View>
         </View>
         <Field label="Reason (optional)" maxLength={300} multiline onChangeText={(reason) => setValues((current) => ({ ...current, reason }))} value={values.reason} />
         {error ? <Notice>{error}</Notice> : null}
@@ -147,10 +148,10 @@ export function FacilityEventsPanel({
         <Text style={styles.formCardTitle}>Publish an event</Text>
         <Segmented label="Type" onChange={(eventType) => setValues((current) => ({ ...current, eventType: eventType as FacilityEventValues['eventType'] }))} options={[{ label: 'Tournament', value: 'tournament' }, { label: 'Community', value: 'community' }, { label: 'Announcement', value: 'announcement' }]} value={values.eventType} />
         <Field label="Title" maxLength={120} onChangeText={(title) => setValues((current) => ({ ...current, title }))} placeholder="Event name" value={values.title} />
-        <Field autoCapitalize="none" label="Date (YYYY-MM-DD)" onChangeText={(date) => setValues((current) => ({ ...current, date }))} value={values.date} />
+        <DateWheelField label="Date" onChange={(date) => setValues((current) => ({ ...current, date }))} value={values.date} />
         <View style={styles.twoColumn}>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="Start (HH:MM)" onChangeText={(startTime) => setValues((current) => ({ ...current, startTime }))} value={values.startTime} /></View>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="End (HH:MM)" onChangeText={(endTime) => setValues((current) => ({ ...current, endTime }))} value={values.endTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="Start" onChange={(startTime) => setValues((current) => ({ ...current, startTime }))} value={values.startTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="End" onChange={(endTime) => setValues((current) => ({ ...current, endTime }))} value={values.endTime} /></View>
         </View>
         <Field label="Description (optional)" maxLength={500} multiline onChangeText={(description) => setValues((current) => ({ ...current, description }))} value={values.description} />
         {error ? <Notice>{error}</Notice> : null}
@@ -166,8 +167,12 @@ export function FacilityEventsPanel({
             <Text style={styles.cardMeta}>{formatTimeRange(event.start_at, event.end_at, timeZone)}{event.description ? ` · ${event.description}` : ''}</Text>
           </View>
           <View style={styles.cardActions}>
-            <IconButton accessibilityLabel="Edit event" disabled={Boolean(busy)} icon="create-outline" onPress={() => onEdit(event)} />
-            <IconButton accessibilityLabel="Delete event" disabled={Boolean(busy)} icon="trash-outline" onPress={() => onDelete(event)} />
+            {event.source_key === 'active_discount' ? <StatusChip emphasized>Managed in Pricing</StatusChip> : (
+              <>
+                <IconButton accessibilityLabel="Edit event" disabled={Boolean(busy)} icon="create-outline" onPress={() => onEdit(event)} />
+                <IconButton accessibilityLabel="Delete event" disabled={Boolean(busy)} icon="trash-outline" onPress={() => onDelete(event)} />
+              </>
+            )}
           </View>
         </View>
       ))}
@@ -238,10 +243,10 @@ export function FacilityEventEditModal({
       <ScrollView contentContainerStyle={styles.formScroll} keyboardShouldPersistTaps="handled">
         <Segmented label="Type" onChange={(eventType) => update('eventType', eventType as FacilityEventValues['eventType'])} options={[{ label: 'Tournament', value: 'tournament' }, { label: 'Community', value: 'community' }, { label: 'Announcement', value: 'announcement' }]} value={values.eventType} />
         <Field label="Title" maxLength={120} onChangeText={(title) => update('title', title)} value={values.title} />
-        <Field autoCapitalize="none" label="Date (YYYY-MM-DD)" onChangeText={(date) => update('date', date)} value={values.date} />
+        <DateWheelField label="Date" onChange={(date) => update('date', date)} value={values.date} />
         <View style={styles.twoColumn}>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="Start (HH:MM)" onChangeText={(startTime) => update('startTime', startTime)} value={values.startTime} /></View>
-          <View style={styles.flexField}><Field autoCapitalize="none" label="End (HH:MM)" onChangeText={(endTime) => update('endTime', endTime)} value={values.endTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="Start" onChange={(startTime) => update('startTime', startTime)} value={values.startTime} /></View>
+          <View style={styles.flexField}><TimeWheelField label="End" onChange={(endTime) => update('endTime', endTime)} value={values.endTime} /></View>
         </View>
         <Field label="Description (optional)" maxLength={500} multiline onChangeText={(description) => update('description', description)} value={values.description} />
         {error ? <Notice>{error}</Notice> : null}
