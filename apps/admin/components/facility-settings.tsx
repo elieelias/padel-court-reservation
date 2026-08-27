@@ -106,12 +106,11 @@ export function FacilityHoursPanel({
         !rule.closing_time ||
         !isTime(rule.opening_time.slice(0, 5)) ||
         !isTime(rule.closing_time.slice(0, 5)) ||
-        rule.opening_time >= rule.closing_time ||
-        rule.slot_duration_minutes < 15
+        rule.opening_time >= rule.closing_time
       )
     ));
     if (invalidRule) {
-      setError(`Check the opening hours and slot duration for ${dayNames[invalidRule.day_of_week]}.`);
+      setError(`Check the opening and closing hours for ${dayNames[invalidRule.day_of_week]}.`);
       return;
     }
 
@@ -153,15 +152,6 @@ export function FacilityHoursPanel({
                   label="Closes"
                   onChange={(value) => updateRule(rule.day_of_week, { closing_time: value })}
                   value={rule.closing_time?.slice(0, 5) || ''}
-                />
-              </View>
-              <View style={styles.flexField}>
-                <Field
-                  inputMode="numeric"
-                  keyboardType="number-pad"
-                  label="Slot (min)"
-                  onChangeText={(value) => updateRule(rule.day_of_week, { slot_duration_minutes: Number(value) || 0 })}
-                  value={String(rule.slot_duration_minutes)}
                 />
               </View>
             </View>
