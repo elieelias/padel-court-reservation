@@ -134,7 +134,7 @@ export function BookingExperience() {
       setScheduleRule(nextSchedule);
       setAvailableStarts(starts);
       setCalendarBlocks((blocksResult.data as CalendarBlockRow[] | null) ?? []);
-      setWaitlistOpportunities((waitlistResult.data as WaitlistOpportunity[] | null) ?? []);
+      setWaitlistOpportunities(((waitlistResult.data as WaitlistOpportunity[] | null) ?? []).filter((item) => item.reservation_type === "open"));
       setAvailabilityState("ready");
     });
 
@@ -257,7 +257,7 @@ export function BookingExperience() {
   }
 
   async function updateWaitlist(join: boolean) {
-    if (!waitlistTarget || waitlistWorking) return;
+    if (!waitlistTarget || waitlistTarget.reservation_type !== "open" || waitlistWorking) return;
     setWaitlistWorking(true);
     setWaitlistMessage("");
     const rpc = join ? "join_reservation_waitlist" : "leave_reservation_waitlist";

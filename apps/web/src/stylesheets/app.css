@@ -645,6 +645,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .friend-unfriend-button:hover:not(:disabled) { border-color: var(--secondary); background: color-mix(in srgb, var(--secondary) 10%, transparent); }
 .friend-unfriend-button:focus-visible { outline: 2px solid var(--secondary); outline-offset: 3px; }
 .friend-unfriend-button:disabled { opacity: .5; cursor: wait; }
+.friend-row > .friend-removal-confirmation { grid-column: 1 / -1; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.friend-removal-confirmation p { margin: 0; color: var(--neutral); font-size: .75rem; line-height: 1.6; }
+.friend-removal-confirmation .friend-removal-error { color: var(--secondary); }
+.friend-removal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.friend-unfriend-button--confirm { border-color: var(--secondary); background: var(--secondary); color: white; }
+.friend-unfriend-button--confirm:hover:not(:disabled) { background: color-mix(in srgb, var(--secondary) 85%, black); }
 .friends-empty, .friends-pending-note { margin: 0; padding: 13px; border: 1px dashed var(--border); border-radius: 13px; }
 .sign-out-button { width: 100%; border-color: var(--border); background: transparent; color: var(--secondary); }
 .player-card--signed-out { width: min(100%, 680px); margin: 0 auto; }
@@ -742,9 +748,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .reservation-item__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .reservation-item__actions > button { flex: 1 1 180px; }
 .reservation-pass-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; padding: 10px 16px; border: 1px solid var(--primary); border-radius: 999px; background: var(--primary); color: var(--tertiary); font-size: .74rem; font-weight: 700; cursor: pointer; }
-.reservation-pass-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; overflow-y: auto; place-items: center; padding: 20px; background: color-mix(in srgb, var(--neutral) 52%, transparent); backdrop-filter: blur(8px); }
-.reservation-pass { position: relative; display: grid; width: min(100%, 390px); overflow: hidden; border-radius: 30px; background: var(--tertiary); box-shadow: var(--shadow); }
-.reservation-pass__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 72px 20px 22px; background: var(--primary); color: var(--tertiary); }
+.reservation-pass-backdrop { position: fixed; inset: 0; width: min(calc(100% - 24px), 390px); max-width: none; max-height: none; margin: auto; padding: 0; border: 0; overflow: visible; background: transparent; color: var(--neutral); }
+.reservation-pass-backdrop::backdrop { background: color-mix(in srgb, var(--neutral) 52%, transparent); backdrop-filter: blur(8px); }
+.reservation-pass { position: relative; display: flex; flex-direction: column; width: 100%; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow: hidden; border-radius: 24px; background: var(--tertiary); box-shadow: var(--shadow); }
+.reservation-pass__body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.reservation-pass__footer { flex-shrink: 0; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--tertiary); }
+.reservation-pass__footer .button { width: 100%; min-height: 44px; }
+.reservation-pass__header { position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 72px 20px 22px; background: var(--primary); color: var(--tertiary); }
 .reservation-pass__header > div { display: grid; gap: 3px; }
 .reservation-pass__header span { font-size: .65rem; font-weight: 650; opacity: .78; }
 .reservation-pass__header strong { font-size: 1.25rem; letter-spacing: -.04em; }
@@ -753,7 +763,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .reservation-pass__close:focus-visible { outline: 3px solid var(--secondary); outline-offset: 3px; }
 .reservation-pass__identity { display: grid; justify-items: center; gap: 5px; padding: 20px 22px 8px; }
 .reservation-pass__identity span, .reservation-pass__code span { color: color-mix(in srgb, var(--neutral) 60%, transparent); font-size: .64rem; font-weight: 700; }
-.reservation-pass__identity strong { font-size: 1.1rem; }
+.reservation-pass__identity strong { max-width: 100%; overflow-wrap: anywhere; font-size: 1.1rem; }
 .reservation-pass__qr { display: grid; width: fit-content; margin: 6px auto 12px; overflow: hidden; place-items: center; border: 9px solid var(--tertiary); border-radius: 22px; background: var(--tertiary); box-shadow: 0 10px 30px color-mix(in srgb, var(--neutral) 12%, transparent); }
 .reservation-pass__code { display: grid; justify-items: center; gap: 6px; margin: 0 22px; padding: 15px 0; border-top: 2px dashed var(--border); border-bottom: 2px dashed var(--border); }
 .reservation-pass__code strong { color: var(--primary); font-size: 1.5rem; letter-spacing: .15em; font-variant-numeric: tabular-nums; }
@@ -773,8 +783,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .receipt-payment-status { display: inline-flex; min-width: 62px; justify-content: center; padding: 5px 9px; border-radius: 999px; font-size: .65rem; font-weight: 850; text-transform: capitalize; }
 .receipt-payment-status--paid { background: color-mix(in srgb, var(--primary) 14%, var(--tertiary)); color: var(--primary); }
 .receipt-payment-status--unpaid { background: color-mix(in srgb, var(--secondary) 13%, var(--tertiary)); color: var(--secondary); }
-.reservation-pass > .post-booking-actions { margin: 14px 22px 0; }
-.reservation-pass > p { margin: 0; padding: 18px 22px 22px; color: color-mix(in srgb, var(--neutral) 62%, transparent); font-size: .7rem; line-height: 1.5; text-align: center; }
+.reservation-pass__body > .post-booking-actions { margin: 14px 22px 0; }
+.reservation-pass__body > p { margin: 0; padding: 18px 22px 22px; color: color-mix(in srgb, var(--neutral) 62%, transparent); font-size: .7rem; line-height: 1.5; text-align: center; }
 
 .receipt-verification { display: grid; min-height: calc(100dvh - 130px); place-items: center; padding: clamp(24px, 6vw, 72px) 20px; }
 .receipt-verification__card { display: grid; width: min(100%, 520px); gap: 16px; padding: clamp(26px, 5vw, 44px); border: 1px solid var(--border); border-radius: 30px; background: var(--tertiary); box-shadow: var(--shadow); }

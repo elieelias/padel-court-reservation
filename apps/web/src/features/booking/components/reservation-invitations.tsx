@@ -1,23 +1,12 @@
 "use client";
 
 import { Check, Clock3, RefreshCw, UserRound, UsersRound, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { intlLocale, type TranslationKey } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
-
-type InvitationRow = {
-  invitation_id: string;
-  reservation_id: string;
-  host_username: string;
-  invitee_username: string;
-  start_at: string;
-  end_at: string;
-  status: "pending" | "accepted" | "declined" | "cancelled";
-  is_host: boolean;
-  created_at: string;
-};
+import { loadPendingInvitations, type InvitationRow } from "@/features/booking/lib/pending-invitations";
 
 export function ReservationInvitations() {
   const { locale, t } = useLanguage();
@@ -26,20 +15,37 @@ export function ReservationInvitations() {
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const refreshVersion = useRef({ version: 0 });
 
   const refresh = useCallback(async () => {
-    const { data, error } = await createClient().rpc("list_private_reservation_invitations");
-    setInvitations((data as InvitationRow[] | null) ?? []);
-    if (error) setMessage(t("invitations.loadError"));
-    setLoading(false);
+    const version = ++refreshVersion.current.version;
+    try {
+      const next = await loadPendingInvitations(createClient());
+      if (version !== refreshVersion.current.version) return;
+      setInvitations(next);
+      setMessage("");
+    } catch {
+      if (version === refreshVersion.current.version) setMessage(t("invitations.loadError"));
+    } finally {
+      if (version === refreshVersion.current.version) setLoading(false);
+    }
   }, [t]);
 
   useEffect(() => {
+    const requests = refreshVersion.current;
     const timeout = window.setTimeout(() => void refresh(), 0);
     const onUpdate = () => void refresh();
+    // Poll while visible: these tables do not currently publish realtime changes.
+    const interval = window.setInterval(() => { if (document.visibilityState === "visible") onUpdate(); }, 15_000);
     window.addEventListener("reservation-updated", onUpdate);
     window.addEventListener("focus", onUpdate);
-    return () => { window.clearTimeout(timeout); window.removeEventListener("reservation-updated", onUpdate); window.removeEventListener("focus", onUpdate); };
+    return () => {
+      requests.version++;
+      window.clearTimeout(timeout);
+      window.clearInterval(interval);
+      window.removeEventListener("reservation-updated", onUpdate);
+      window.removeEventListener("focus", onUpdate);
+    };
   }, [refresh]);
 
   const incoming = invitations.filter((invitation) => !invitation.is_host && invitation.status === "pending");
@@ -55,12 +61,19 @@ export function ReservationInvitations() {
   }), [locale]);
 
   async function respond(invitationId: string, accept: boolean) {
+    if (workingId) return;
     setWorkingId(invitationId);
-    const { error } = await createClient().rpc("respond_reservation_invitation", { p_invitation_id: invitationId, p_accept: accept });
-    setMessage(error ? (locale === "ar" ? t("invitations.respondError") : error.message) : accept ? t("invitations.accepted") : t("invitations.declined"));
-    await refresh();
-    setWorkingId(null);
-    router.refresh();
+    try {
+      const { error } = await createClient().rpc("respond_reservation_invitation", { p_invitation_id: invitationId, p_accept: accept });
+      if (error) throw error;
+      await refresh();
+      window.dispatchEvent(new Event("reservation-updated"));
+      router.refresh();
+    } catch {
+      setMessage(t("invitations.respondError"));
+    } finally {
+      setWorkingId(null);
+    }
   }
 
   if (!loading && !message && !incoming.length && !hosted.length) return null;

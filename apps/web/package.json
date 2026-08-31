@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test:post-booking": "node --test tests/post-booking.test.mjs",
     "test:auth": "node --test tests/email-validation.test.mjs",
-    "test:routes": "node --test tests/route-access.test.mjs"
+    "test:routes": "node --test tests/route-access.test.mjs",
+    "test:friends": "node --test tests/unfriend.test.mjs",
+    "test:invitations": "node --test tests/pending-invitations.test.mjs",
+    "test:receipt": "node --test tests/reservation-pass.test.mjs"
   },
   "dependencies": {
     "@fontsource/epilogue": "5.3.0",

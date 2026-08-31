@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { CalendarClock, History, QrCode, UserRound, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { intlLocale, type Locale, type TranslationKey } from "@/lib/i18n";
@@ -106,14 +106,21 @@ function ReservationCard({ reservation, showPayment = false, action }: { reserva
 
 function ReservationPass({ playerName, reservation, onClose }: { playerName: string; reservation: ReservationRow; onClose: () => void }) {
   const { locale, t } = useLanguage();
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    // The browser's top layer avoids clipping by transformed page containers,
+    // traps keyboard focus, and restores focus to the receipt button on close.
+    dialog.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
     };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+  }, []);
 
   if (!reservation.pass_token || !reservation.pass_code) return null;
   const qrValue = reservationReceiptUrl(reservation.pass_token);
@@ -121,12 +128,13 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
   const guestCount = reservation.unregistered_player_count ?? 0;
 
   return (
-    <div className="reservation-pass-backdrop" onClick={onClose} role="presentation">
-      <section aria-label={t("profile.reservationPass")} aria-modal="true" className="reservation-pass" onClick={(event) => event.stopPropagation()} role="dialog">
-        <button aria-label={t("common.close")} className="reservation-pass__close" onClick={onClose} type="button"><X aria-hidden="true" size={22} /></button>
+    <dialog aria-label={t("profile.reservationPass")} className="reservation-pass-backdrop" ref={dialogRef} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="reservation-pass">
         <header className="reservation-pass__header">
           <div><span>{t("profile.reservationPass")}</span><strong>Padel One</strong></div>
+          <button aria-label={t("common.close")} className="reservation-pass__close" onClick={onClose} type="button"><X aria-hidden="true" size={22} /></button>
         </header>
+        <div className="reservation-pass__body">
         <div className="reservation-pass__identity"><span>{t("profile.player")}</span><strong>{playerName}</strong></div>
         <div className="reservation-pass__qr" aria-label={t("profile.qrCode")}>
           <QRCodeSVG bgColor="#f4f7fa" fgColor="#26313b" level="M" marginSize={2} size={190} value={qrValue} />
@@ -167,10 +175,14 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
             </ul>
           </section>
         ) : null}
-        <PostBookingActions endAt={reservation.end_at} startAt={reservation.start_at} />
+        <PostBookingActions endAt={reservation.end_at} showShare={false} startAt={reservation.start_at} />
         <p>{t("profile.passInstruction")}</p>
+        </div>
+        <footer className="reservation-pass__footer">
+          <button className="button button--primary" onClick={onClose} type="button">{t("booking.done")}</button>
+        </footer>
       </section>
-    </div>
+    </dialog>
   );
 }
 

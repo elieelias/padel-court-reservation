@@ -4,7 +4,7 @@ import { Check, Search, UserMinus, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { createClient } from "@/lib/supabase/client";
 
@@ -33,6 +33,9 @@ export function FriendManager() {
   const [searching, setSearching] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removalError, setRemovalError] = useState("");
+  const removalInFlight = useRef(false);
 
   const refresh = useCallback(async () => {
     const { data, error } = await createClient().rpc("list_friendships");
@@ -127,13 +130,16 @@ export function FriendManager() {
   }
 
   async function unfriend(friend: FriendshipRow) {
-    if (workingId || !window.confirm(t("friends.unfriendConfirm", { username: friend.username }))) return;
+    // Confirm inside the app: embedded browsers can suppress window.confirm.
+    if (workingId || removalInFlight.current || removingId !== friend.friendship_id) return;
+    removalInFlight.current = true;
     setWorkingId(friend.friendship_id);
+    setRemovalError("");
     setMessage("");
     try {
       const { error } = await createClient().rpc("remove_friend", { p_friendship_id: friend.friendship_id });
       if (error) {
-        setMessage(t("friends.unfriendError"));
+        setRemovalError(t("friends.unfriendError"));
         return;
       }
       setConnections((items) => items.filter((item) => item.friendship_id !== friend.friendship_id));
@@ -141,10 +147,12 @@ export function FriendManager() {
         ? { ...item, relationship_status: null, relationship_direction: "none" }
         : item));
       setMessage(t("friends.unfriended", { username: friend.username }));
+      setRemovingId(null);
       router.refresh();
     } catch {
-      setMessage(t("friends.unfriendError"));
+      setRemovalError(t("friends.unfriendError"));
     } finally {
+      removalInFlight.current = false;
       setWorkingId(null);
     }
   }
@@ -188,15 +196,34 @@ export function FriendManager() {
             </Link>
             <button
               aria-label={t("friends.unfriendUser", { username: item.username })}
+              aria-expanded={removingId === item.friendship_id}
+              aria-controls={removingId === item.friendship_id ? `unfriend-${item.friendship_id}` : undefined}
               aria-busy={workingId === item.friendship_id}
               className="friend-unfriend-button"
               disabled={workingId !== null}
-              onClick={() => void unfriend(item)}
+              onClick={() => {
+                setRemovingId(removingId === item.friendship_id ? null : item.friendship_id);
+                setRemovalError("");
+              }}
               type="button"
             >
               <UserMinus aria-hidden="true" size={16} />
               {workingId === item.friendship_id ? t("friends.unfriending") : t("friends.unfriend")}
             </button>
+            {removingId === item.friendship_id && (
+              <div className="friend-removal-confirmation" id={`unfriend-${item.friendship_id}`}>
+                <p>{t("friends.unfriendConfirm", { username: item.username })}</p>
+                {removalError && <p className="friend-removal-error" role="alert">{removalError}</p>}
+                <div className="friend-removal-actions">
+                  <button className="friend-unfriend-button" disabled={workingId !== null} onClick={() => { setRemovingId(null); setRemovalError(""); }} type="button">
+                    {t("common.cancel")}
+                  </button>
+                  <button className="friend-unfriend-button friend-unfriend-button--confirm" disabled={workingId !== null} onClick={() => void unfriend(item)} type="button">
+                    {workingId === item.friendship_id ? t("friends.unfriending") : t("friends.unfriend")}
+                  </button>
+                </div>
+              </div>
+            )}
           </article>
         )) : <p className="friends-empty">{t("friends.noFriends")}</p>}
       </div>

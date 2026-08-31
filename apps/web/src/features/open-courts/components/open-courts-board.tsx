@@ -64,7 +64,7 @@ export function OpenCourtsBoard({ cancellationHours = 2 }: { cancellationHours?:
     else {
       setCourts((courtResult.data as OpenCourt[] | null) ?? []);
       setRequests((requestResult.data as JoinRequest[] | null) ?? []);
-      setWaitlists((waitlistResult.data as PlayerWaitlist[] | null) ?? []);
+      setWaitlists(((waitlistResult.data as PlayerWaitlist[] | null) ?? []).filter((item) => item.reservation_type === "open"));
     }
     setLoading(false);
   }, [t]);

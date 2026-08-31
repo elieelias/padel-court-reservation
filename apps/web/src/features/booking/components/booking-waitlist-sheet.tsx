@@ -15,6 +15,7 @@ type BookingWaitlistSheetProps = {
 };
 
 export function BookingWaitlistSheet({ locale, message, onClose, onUpdate, selectedDateLabel, t, target, working }: BookingWaitlistSheetProps) {
+  if (target.reservation_type !== "open") return null;
   const alreadyWaiting = target.waitlist_status === "waiting";
   const time = new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", minute: "2-digit", timeZone: facilityTimeZone });
 

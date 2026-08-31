@@ -9,7 +9,7 @@ import { appleCalendarFile, type CalendarReservation, googleCalendarUrl } from "
 import { shareReservationDetails } from "@/features/booking/lib/reservation-sharing";
 
 /** Groups the useful next steps that remain available after a booking. */
-export function PostBookingActions(reservation: CalendarReservation) {
+export function PostBookingActions({ showShare = true, ...reservation }: CalendarReservation & { showShare?: boolean }) {
   const { locale, t } = useLanguage();
   const [shareMessage, setShareMessage] = useState("");
   const [manualCopy, setManualCopy] = useState(false);
@@ -82,9 +82,9 @@ export function PostBookingActions(reservation: CalendarReservation) {
         <button className="post-booking-action" onClick={downloadAppleCalendar} type="button">
           <Download aria-hidden="true" size={17} />{t("calendar.apple")}
         </button>
-        <button className="post-booking-action post-booking-action--share" disabled={sharing} onClick={() => void shareReservation()} type="button">
+        {showShare && <button className="post-booking-action post-booking-action--share" disabled={sharing} onClick={() => void shareReservation()} type="button">
           <Share2 aria-hidden="true" size={17} />{t("booking.shareReservation")}
-        </button>
+        </button>}
       </div>
       {shareMessage ? <span className="post-booking-actions__message" role="status">{shareMessage}</span> : null}
       {manualCopy ? (
