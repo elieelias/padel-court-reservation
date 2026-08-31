@@ -2,7 +2,7 @@ import { CalendarDays, Check, CheckCircle2, Users, X } from "lucide-react";
 import Link from "next/link";
 import { facilityName } from "@/lib/config";
 import type { Locale, Translator } from "@/lib/i18n";
-import { CalendarActions } from "@/features/booking/components/calendar-actions";
+import { PostBookingActions } from "@/features/booking/components/post-booking-actions";
 import {
   type ConfirmationState,
   type FriendRow,
@@ -12,9 +12,9 @@ import {
 } from "@/features/booking/lib/booking-calendar";
 
 type BookingConfirmationSheetProps = {
+  savedStatus: "pending" | "confirmed" | null;
   confirmationMessage: string;
   confirmationState: ConfirmationState;
-  existingPlayers: number;
   friends: FriendRow[];
   friendsLoading: boolean;
   locale: Locale;
@@ -22,7 +22,6 @@ type BookingConfirmationSheetProps = {
   onClear: () => void;
   onConfirm: () => void;
   onDismiss: () => void;
-  onSetExistingPlayers: (count: number) => void;
   onSetOpenCourt: (open: boolean) => void;
   onSetOccurrenceCount: (count: number) => void;
   onToggleFriend: (playerId: string) => void;
@@ -38,9 +37,9 @@ type BookingConfirmationSheetProps = {
 
 /** The booking form is isolated from the calendar so each UI can evolve independently. */
 export function BookingConfirmationSheet({
+  savedStatus,
   confirmationMessage,
   confirmationState,
-  existingPlayers,
   friends,
   friendsLoading,
   locale,
@@ -48,7 +47,6 @@ export function BookingConfirmationSheet({
   onClear,
   onConfirm,
   onDismiss,
-  onSetExistingPlayers,
   onSetOpenCourt,
   onSetOccurrenceCount,
   onToggleFriend,
@@ -72,9 +70,9 @@ export function BookingConfirmationSheet({
         {confirmationState === "success" ? (
           <div className="booking-confirmation-success">
             <span className="booking-confirmation-success__icon"><CheckCircle2 aria-hidden="true" size={28} /></span>
-            <div><h2 id="confirm-booking-heading">{t("booking.successTitle")}</h2><p>{confirmationMessage}</p></div>
+            <div><h2 id="confirm-booking-heading">{t(savedStatus === "pending" ? "booking.pendingTitle" : savedStatus === "confirmed" ? "booking.successTitle" : "booking.savedTitle")}</h2><p>{confirmationMessage}</p></div>
             <ReservationSummary dateLabel={selectedDateLabel} locale={locale} occurrenceCount={occurrenceCount} openingMinutes={openingMinutes} selectedTime={selectedTime} t={t} />
-            <CalendarActions endAt={calendarRange.endAt} occurrenceCount={occurrenceCount} startAt={calendarRange.startAt} />
+            <PostBookingActions endAt={calendarRange.endAt} occurrenceCount={occurrenceCount} startAt={calendarRange.startAt} />
             <a className="button button--primary confirmation-action" href="/book#upcoming-reservations">{t("booking.viewReservation")}</a>
             <button className="button booking-confirmation-sheet__cancel" type="button" onClick={onClear}>{t("booking.done")}</button>
           </div>
@@ -111,17 +109,9 @@ export function BookingConfirmationSheet({
                 </div>
               ) : null}
             </div>
-            {openCourt ? (
-              <div className="booking-player-count">
-                <div><strong>{t("booking.playersAlready")}</strong><span>{t("booking.playersOfFour", { count: existingPlayers })}</span></div>
-                <div className="booking-player-count__options" role="group" aria-label={t("booking.playersAlready")}>
-                  {[1, 2, 3].map((count) => <button aria-pressed={existingPlayers === count} className={existingPlayers === count ? "is-selected" : ""} disabled={saving} key={count} onClick={() => onSetExistingPlayers(count)} type="button">{count}</button>)}
-                </div>
-              </div>
-            ) : (
-              <div className="booking-friend-picker">
-                <div className="booking-friend-picker__heading"><span><Users aria-hidden="true" size={18} /><strong>{t("booking.addFriends")}</strong></span><small>{t("booking.playersOfFour", { count: selectedFriendIds.length + 1 })}</small></div>
-                <p>{t("booking.addFriendsHelp")}</p>
+            <div className="booking-friend-picker">
+                <div className="booking-friend-picker__heading"><span><Users aria-hidden="true" size={18} /><strong>{t("booking.addFriends")}</strong></span><small>{t("booking.invitedCount", { count: selectedFriendIds.length })}</small></div>
+                <p>{t(openCourt ? "booking.openInviteHelp" : "booking.addFriendsHelp")}</p>
                 {friendsLoading ? <span className="booking-friend-picker__empty">{t("common.loading")}</span> : friends.length ? (
                   <div className="booking-friend-picker__list">
                     {friends.map((friend) => {
@@ -131,7 +121,7 @@ export function BookingConfirmationSheet({
                   </div>
                 ) : <span className="booking-friend-picker__empty">{t("booking.noFriends")} <Link href="/profile/friends">{t("booking.addFriendsLink")}</Link></span>}
               </div>
-            )}
+            {(openCourt || selectedFriendIds.length > 0) && <p className="reservation-lineup__help">{t(openCourt ? "lineup.pendingOpen" : "lineup.pendingPrivate")}</p>}
             {confirmationState === "error" && <p className="booking-confirmation-sheet__message" role="alert">{confirmationMessage}</p>}
             <button className="button button--primary confirmation-action" disabled={saving || selectionIsInvalid} onClick={onConfirm} type="button">
               {saving ? t("booking.confirming") : t("booking.confirm")}

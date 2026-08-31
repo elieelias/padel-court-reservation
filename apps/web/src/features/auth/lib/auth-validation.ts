@@ -1,5 +1,6 @@
 import { defaultCountryCode } from "@/lib/config";
 import type { TranslationKey } from "@/lib/i18n";
+import { checkEmailSyntax } from "./email-policy";
 
 export type AuthMode = "sign-in" | "sign-up";
 export type AuthStep = "details" | "link-sent" | "verify";
@@ -9,7 +10,7 @@ export function normalizeEmail(value: string) {
 }
 
 export function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  return checkEmailSyntax(value).ok;
 }
 
 export function isValidUsername(value: string) {
@@ -41,6 +42,9 @@ export function isValidPhoneNumber(value: string) {
 /** Convert Supabase's technical messages into guidance a player can act on. */
 export function friendlyAuthError(message: string, t: (key: TranslationKey) => string) {
   const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("signup_email_unavailable")) return t("auth.emailCheckUnavailable");
+  if (normalizedMessage.includes("signup_email_")) return t("auth.emailCannotReceive");
 
   if (normalizedMessage.includes("email address not authorized")) return t("auth.testMode");
   if (normalizedMessage.includes("email provider") || normalizedMessage.includes("email signups are disabled")) return t("auth.providerDisabled");

@@ -1,15 +1,17 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { CalendarClock, History, LogOut, QrCode, UserRound, WalletCards, X } from "lucide-react";
+import { CalendarClock, History, QrCode, UserRound, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { intlLocale, type Locale, type TranslationKey } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
-import { CalendarActions } from "@/features/booking/components/calendar-actions";
+import { ReservationLineup } from "@/features/booking/components/reservation-lineup";
+import { PostBookingActions } from "@/features/booking/components/post-booking-actions";
+import { reservationReceiptUrl } from "@/features/booking/lib/receipt-link";
 
 export type ReservationRow = {
   id: string;
@@ -96,6 +98,7 @@ function ReservationCard({ reservation, showPayment = false, action }: { reserva
         <div><dt>{t("profile.reservation")}</dt><dd>{reservation.type === "open" ? t("booking.openCourt") : t("profile.privateCourt")}</dd></div>
         <div><dt>{t("profile.price")}</dt><dd>{priceLabel(reservation.price, locale)}</dd></div>
       </dl>
+      {reservation.status === "pending" && <p className="reservation-lineup__help">{t(reservation.type === "open" ? "lineup.pendingOpen" : "lineup.pendingPrivate")}</p>}
       {action}
     </article>
   );
@@ -103,7 +106,6 @@ function ReservationCard({ reservation, showPayment = false, action }: { reserva
 
 function ReservationPass({ playerName, reservation, onClose }: { playerName: string; reservation: ReservationRow; onClose: () => void }) {
   const { locale, t } = useLanguage();
-  const siteOrigin = useSyncExternalStore(subscribeToOrigin, readBrowserOrigin, readServerOrigin);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -114,9 +116,7 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
   }, [onClose]);
 
   if (!reservation.pass_token || !reservation.pass_code) return null;
-  const qrValue = siteOrigin
-    ? `${siteOrigin}/receipt/${reservation.pass_token}`
-    : `padel-one:reservation:${reservation.pass_token}`;
+  const qrValue = reservationReceiptUrl(reservation.pass_token);
   const participants = reservation.participants ?? [];
   const guestCount = reservation.unregistered_player_count ?? 0;
 
@@ -133,6 +133,7 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
         </div>
         <div className="reservation-pass__code"><span>{t("profile.backupCode")}</span><strong>{reservation.pass_code}</strong></div>
         <dl className="reservation-pass__details">
+          <div><dt>{t("profile.bookingStatus")}</dt><dd>{t(`status.${reservation.status}` as TranslationKey)}</dd></div>
           <div><dt>{t("profile.date")}</dt><dd>{reservationDate(reservation.start_at, locale)}</dd></div>
           <div><dt>{t("profile.time")}</dt><dd>{reservationTime(reservation.start_at, reservation.end_at, locale)}</dd></div>
           <div><dt>{t("profile.reservation")}</dt><dd>{reservation.type === "open" ? t("booking.openCourt") : t("profile.privateCourt")}</dd></div>
@@ -166,39 +167,33 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
             </ul>
           </section>
         ) : null}
-        <CalendarActions endAt={reservation.end_at} startAt={reservation.start_at} />
+        <PostBookingActions endAt={reservation.end_at} startAt={reservation.start_at} />
         <p>{t("profile.passInstruction")}</p>
       </section>
     </div>
   );
 }
 
-function subscribeToOrigin() {
-  return () => undefined;
-}
-
-function readBrowserOrigin() {
-  return window.location.origin;
-}
-
-function readServerOrigin() {
-  return '';
-}
-
 export function UpcomingReservations({ initialReservations, initialUser, cancellationHours, playerName }: { initialReservations: ReservationRow[]; initialUser: User | null; cancellationHours: number; playerName: string }) {
   const { locale, t } = useLanguage();
   const router = useRouter();
-  const [reservations, setReservations] = useState(initialReservations);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  // Server refreshes must replace stale statuses and lineups after an invitation response.
+  const reservations = initialReservations.filter((reservation) => !hiddenIds.includes(reservation.id));
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [leavingId, setLeavingId] = useState<string | null>(null);
-  const [passReservation, setPassReservation] = useState<ReservationRow | null>(null);
+  const [passId, setPassId] = useState<string | null>(null);
+  const passReservation = reservations.find((reservation) => reservation.id === passId);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
+    const refresh = () => { setCurrentTime(Date.now()); router.refresh(); };
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, [router]);
 
   function canCancel(reservation: ReservationRow) {
     return Boolean(initialUser && reservation.host_id === initialUser.id && new Date(reservation.start_at).getTime() - currentTime > cancellationHours * 3_600_000);
@@ -214,32 +209,18 @@ export function UpcomingReservations({ initialReservations, initialUser, cancell
       setMessage(locale === "ar" ? t("profile.cancelError") : error.message || t("profile.cancelError"));
       return;
     }
-    setReservations((items) => items.filter((item) => item.id !== reservation.id));
+    setHiddenIds((ids) => [...ids, reservation.id]);
     setMessage(t("profile.cancelled"));
     router.refresh();
   }
 
-  async function leaveOpenCourt(reservation: ReservationRow) {
-    if (leavingId || !window.confirm(t("openCourts.leavePrompt"))) return;
-    setLeavingId(reservation.id);
-    setMessage("");
-    const { error } = await createClient().rpc("leave_open_court", { p_reservation_id: reservation.id });
-    setLeavingId(null);
-    if (error) {
-      setMessage(locale === "ar" ? t("openCourts.leaveError") : error.message || t("openCourts.leaveError"));
-      return;
-    }
-    setReservations((items) => items.filter((item) => item.id !== reservation.id));
-    setMessage(t("openCourts.left"));
-    router.refresh();
-  }
 
   return (
     <section className="panel reservation-list-card book-upcoming-reservations" id="upcoming-reservations">
       <div className="section-heading"><div><span className="eyebrow">{t("profile.upcomingEyebrow")}</span><h2>{t("profile.upcomingTitle")}</h2></div><CalendarClock aria-hidden="true" size={25} /></div>
       {message && <p className="profile-message" role="status">{message}</p>}
-      {reservations.length ? <div className="reservation-list">{reservations.map((reservation) => <ReservationCard action={<div className="reservation-item__actions">{reservation.pass_token && reservation.pass_code ? <button className="reservation-pass-button" onClick={() => setPassReservation(reservation)} type="button"><QrCode aria-hidden="true" size={17} />{t("profile.showPass")}</button> : null}{canCancel(reservation) ? <button className="reservation-cancel" disabled={cancellingId === reservation.id} onClick={() => void cancelReservation(reservation)} type="button">{cancellingId === reservation.id ? t("profile.cancelling") : t("profile.cancelReservation")}</button> : null}{initialUser && reservation.type === "open" && reservation.host_id !== initialUser.id && new Date(reservation.start_at).getTime() > currentTime ? <button className="reservation-leave" disabled={leavingId === reservation.id} onClick={() => void leaveOpenCourt(reservation)} type="button"><LogOut aria-hidden="true" size={16} />{leavingId === reservation.id ? t("openCourts.leaving") : t("openCourts.leave")}</button> : null}</div>} key={reservation.id} reservation={reservation} />)}</div> : <div className="empty-reservation"><strong>{t("profile.noUpcoming")}</strong><span>{t("profile.noUpcomingText")}</span></div>}
-      {passReservation ? <ReservationPass onClose={() => setPassReservation(null)} playerName={playerName} reservation={passReservation} /> : null}
+      {reservations.length ? <div className="reservation-list">{reservations.map((reservation) => <ReservationCard action={<div className="reservation-item__actions">{reservation.pass_token && reservation.pass_code ? <button className="reservation-pass-button" onClick={() => setPassId(reservation.id)} type="button"><QrCode aria-hidden="true" size={17} />{t("profile.showPass")}</button> : null}{canCancel(reservation) ? <button className="reservation-cancel" disabled={cancellingId === reservation.id} onClick={() => void cancelReservation(reservation)} type="button">{cancellingId === reservation.id ? t("profile.cancelling") : t("profile.cancelReservation")}</button> : null}{initialUser && <ReservationLineup reservationId={reservation.id} userId={initialUser.id} onLeft={() => setHiddenIds((ids) => [...ids, reservation.id])} />}</div>} key={reservation.id} reservation={reservation} />)}</div> : <div className="empty-reservation"><strong>{t("profile.noUpcoming")}</strong><span>{t("profile.noUpcomingText")}</span></div>}
+      {passReservation ? <ReservationPass onClose={() => setPassId(null)} playerName={playerName} reservation={passReservation} /> : null}
     </section>
   );
 }

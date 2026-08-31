@@ -36,6 +36,7 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
 
   async function sendCode(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
+    if (pending) return;
     const submittedValues = event ? new FormData(event.currentTarget) : null;
     const submittedFullName = submittedValues ? String(submittedValues.get("full-name") ?? fullName) : fullName;
     const submittedUsername = submittedValues ? String(submittedValues.get("username") ?? username) : username;
@@ -83,6 +84,18 @@ export function EmailAuthForm({ enabled, mode }: { enabled: boolean; mode: AuthM
 
     setPending(true);
     try {
+      // Stop before username lookup or Auth user creation for unusable domains.
+      const emailCheck = await fetch("/auth/email-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const validation = await emailCheck.json();
+      if (!emailCheck.ok || validation.ok !== true) {
+        setMessage(t(validation.reason === "unavailable" || emailCheck.status >= 500 ? "auth.emailCheckUnavailable" : "auth.emailCannotReceive"));
+        return;
+      }
       const supabase = createClient();
       if (isSignUp) {
         const { data: available, error: availabilityError } = await supabase.rpc("username_available", { p_username: trimmedUsername });

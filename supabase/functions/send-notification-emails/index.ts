@@ -63,19 +63,23 @@ function messageFor(item: OutboxItem) {
     if (item.event_type === "join_request_rejected") return { subject: "Friend request update", heading: "Friend request declined", body: `${actor} declined your friend request.` };
     return { subject: "New friend request", heading: "You have a friend request", body: `${actor} sent you a friend request.` };
   }
-  if (item.context_type === "open_court_request") {
+  if (item.context_type === "open_court_request" && !item.event_key) {
     if (item.event_type === "join_request_accepted") return { subject: "Court request accepted", heading: "You are joining the court", body: `${actor} accepted your request to join an open court.` };
     if (item.event_type === "join_request_rejected") return { subject: "Court request update", heading: "Join request declined", body: `${actor} declined your request to join an open court.` };
     return { subject: "New court join request", heading: "A player wants to join", body: `${actor} requested to join your open court.` };
   }
 
   const messages: Record<string, { subject: string; heading: string; body: string }> = {
+    reservation_pending: { subject: "Reservation pending", heading: "Waiting for your lineup", body: "Your court time is held. Private bookings confirm when every invitation is accepted; Open Courts confirm when four players are included." },
+    reservation_ready: { subject: "Reservation confirmed", heading: "Your reservation is confirmed", body: "The required players are now confirmed for your reservation." },
+    reservation_player_left: { subject: "A player cancelled their spot", heading: "Your lineup changed", body: `${actor} cancelled their spot in your reservation.` },
+    reservation_player_removed: { subject: "Reservation place removed", heading: "Your lineup changed", body: "The host removed your place or invitation from a reservation." },
     reservation_confirmation: { subject: "Reservation confirmed", heading: "Your court is confirmed", body: "Your padel court reservation has been confirmed." },
     reservation_cancellation: { subject: "Reservation cancelled", heading: "Reservation cancelled", body: "A padel court reservation was cancelled." },
     reservation_reminder: { subject: "Upcoming padel reservation", heading: "Your court is coming up", body: "This is a reminder for your upcoming padel court reservation." },
     participant_removed: { subject: "Reservation participant update", heading: "Your reservation changed", body: "You are no longer listed as a participant in this reservation." },
     open_court_auto_cancelled: { subject: "Open court cancelled", heading: "Open court cancelled", body: "The open court was cancelled because it did not have enough confirmed players." },
-    reservation_invitation: { subject: "Padel reservation invitation", heading: "You are invited to play", body: `${actor} invited you to a private padel reservation.` },
+    reservation_invitation: { subject: "Padel reservation invitation", heading: "You are invited to play", body: `${actor} invited you to a padel reservation.` },
     reservation_invitation_accepted: { subject: "Reservation invitation accepted", heading: "Invitation accepted", body: `${actor} accepted your reservation invitation.` },
     reservation_invitation_declined: { subject: "Reservation invitation update", heading: "Invitation declined", body: `${actor} declined your reservation invitation.` },
     waitlist_joined: { subject: "Player joined the waitlist", heading: "Your court has a waitlist", body: `${actor} joined the waitlist for your open court.` },

@@ -4,9 +4,11 @@ export const appName =
 export const facilityName =
   process.env.NEXT_PUBLIC_FACILITY_NAME?.trim() || "Padel Court";
 
+export const defaultSiteUrl = "https://padel-court-reservation-web.vercel.app";
+
 export const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  "https://padel-court-reservation-web.vercel.app"
+  defaultSiteUrl
 ).replace(/\/+$/, "");
 
 export const hasSupabaseConfig = Boolean(

@@ -213,6 +213,35 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .open-courts-empty svg { color: var(--primary); }
 .open-courts-empty h3, .open-courts-empty p { margin: 0; }
 .open-courts-empty p { max-width: 42ch; color: color-mix(in srgb, var(--neutral) 60%, transparent); font-size: .72rem; line-height: 1.5; }
+.player-waitlist { scroll-margin-top: 92px; background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 9%, var(--sand)), color-mix(in srgb, var(--sand) 86%, var(--oat))); }
+.player-waitlist__intro { max-width: 58ch; margin: -4px 0 2px; color: color-mix(in srgb, var(--neutral) 64%, transparent); font-size: .72rem; line-height: 1.55; }
+.player-waitlist__list { display: grid; gap: 10px; }
+.player-waitlist-card { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 13px; border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border)); border-radius: 19px; background: color-mix(in srgb, var(--tertiary) 90%, white); box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 7%, transparent); }
+.player-waitlist-card__position { display: grid; width: 58px; aspect-ratio: 1; place-items: center; align-content: center; border-radius: 18px; background: var(--primary); color: var(--tertiary); line-height: 1; }
+.player-waitlist-card__position small { font-size: .5rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.player-waitlist-card__position strong { margin-top: 4px; font-size: 1.32rem; }
+.player-waitlist-card__body { display: grid; min-width: 0; gap: 4px; }
+.player-waitlist-card__body > span { display: flex; align-items: center; gap: 6px; color: var(--primary); font-size: .66rem; font-weight: 800; }
+.player-waitlist-card__body h3 { margin: 0; font-size: .84rem; letter-spacing: -.025em; }
+.player-waitlist-card__body a { width: fit-content; font-size: .65rem; }
+.player-waitlist-card__actions { display: grid; min-width: 116px; gap: 6px; }
+.player-waitlist-card__actions a, .player-waitlist-card__actions button { display: inline-flex; min-height: 36px; align-items: center; justify-content: space-between; gap: 6px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 11px; background: transparent; color: var(--primary); font-size: .63rem; font-weight: 800; cursor: pointer; }
+.player-waitlist-card__actions button { justify-content: center; border-color: color-mix(in srgb, var(--secondary) 55%, var(--border)); color: var(--secondary); }
+.player-waitlist-card__actions a:hover { background: color-mix(in srgb, var(--primary) 9%, var(--tertiary)); }
+.player-waitlist-card__actions button:hover { background: color-mix(in srgb, var(--secondary) 9%, var(--tertiary)); }
+.player-waitlist-card__actions button:disabled { opacity: .5; cursor: wait; }
+.open-court-host-waitlist { padding-top: 20px; border-top: 1px solid var(--border); }
+.open-court-host-waitlist > p { margin: -6px 0 2px; color: color-mix(in srgb, var(--neutral) 64%, transparent); font-size: .72rem; line-height: 1.55; }
+.open-court-waitlist-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.open-court-waitlist-list > li { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 9px; }
+.open-court-waitlist-list > li > span { display: grid; width: 32px; aspect-ratio: 1; place-items: center; border-radius: 50%; background: var(--primary); color: var(--tertiary); font-size: .7rem; font-weight: 850; }
+.open-court-waitlist-list .participant-card { width: 100%; }
+@media (max-width: 620px) {
+  .player-waitlist-card { grid-template-columns: 56px minmax(0, 1fr); }
+  .player-waitlist-card__position { width: 52px; }
+  .player-waitlist-card__actions { grid-column: 1 / -1; grid-template-columns: 1fr; min-width: 0; }
+  .player-waitlist-card__actions:has(> a) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* Facility events and closure details. */
 .events-page { width: min(100%, 900px); }
 .events-panel { display: grid; gap: 18px; padding: clamp(20px, 4vw, 32px); border: 1px solid var(--border); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 75%, var(--oat)); }
@@ -419,11 +448,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .booking-repeat__options button { min-height: 38px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--tertiary); color: var(--neutral); font-size: .65rem; font-weight: 750; cursor: pointer; }
 .booking-repeat__options button:hover { background: color-mix(in srgb, var(--primary) 9%, var(--tertiary)); }
 .booking-repeat__options button.is-selected { border-color: var(--primary); background: var(--primary); color: var(--tertiary); }
-.calendar-actions { display: grid; gap: 9px; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--primary) 6%, var(--tertiary)); }
-.calendar-actions > strong { font-size: .72rem; }
-.calendar-actions > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-.calendar-action { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--primary) 34%, var(--border)); border-radius: 12px; background: var(--tertiary); color: var(--primary); font-size: .66rem; font-weight: 750; cursor: pointer; }
-.calendar-action:hover { background: color-mix(in srgb, var(--primary) 9%, var(--tertiary)); }
+.post-booking-actions { display: grid; gap: 9px; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--primary) 6%, var(--tertiary)); }
+.post-booking-actions > strong { font-size: .72rem; }
+.post-booking-actions__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.post-booking-action { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--primary) 34%, var(--border)); border-radius: 12px; background: var(--tertiary); color: var(--primary); font-size: .66rem; font-weight: 750; cursor: pointer; }
+.post-booking-action--share { grid-column: 1 / -1; background: var(--primary); color: var(--tertiary); }
+.post-booking-action:hover { background: color-mix(in srgb, var(--primary) 9%, var(--tertiary)); }
+.post-booking-action--share:hover { background: color-mix(in srgb, var(--primary) 88%, var(--neutral)); }
+.post-booking-action:disabled { opacity: .6; cursor: wait; }
+.post-booking-action svg { flex-shrink: 0; }
+.post-booking-actions__message { color: var(--primary); font-size: .64rem; font-weight: 750; }
+.post-booking-actions__copy { display: grid; gap: 8px; font-size: .7rem; line-height: 1.5; }
+.post-booking-actions__copy textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--tertiary); color: var(--neutral); font: inherit; resize: vertical; }
 .booking-friend-picker { display: grid; gap: 10px; margin: -2px 0 16px; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--primary) 7%, var(--tertiary)); }
 .booking-friend-picker__heading, .booking-friend-picker__heading > span { display: flex; align-items: center; gap: 7px; }
 .booking-friend-picker__heading { justify-content: space-between; }
@@ -605,6 +641,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .friend-icon-button { display: grid; width: 36px; aspect-ratio: 1; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: transparent; color: var(--primary); cursor: pointer; }
 .friend-icon-button:hover, .friend-icon-button.is-accept { border-color: var(--primary); background: var(--primary); color: var(--tertiary); }
 .friend-icon-button:disabled { opacity: .5; cursor: wait; }
+.friend-unfriend-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--secondary); font: inherit; font-size: .7rem; font-weight: 700; cursor: pointer; }
+.friend-unfriend-button:hover:not(:disabled) { border-color: var(--secondary); background: color-mix(in srgb, var(--secondary) 10%, transparent); }
+.friend-unfriend-button:focus-visible { outline: 2px solid var(--secondary); outline-offset: 3px; }
+.friend-unfriend-button:disabled { opacity: .5; cursor: wait; }
 .friends-empty, .friends-pending-note { margin: 0; padding: 13px; border: 1px dashed var(--border); border-radius: 13px; }
 .sign-out-button { width: 100%; border-color: var(--border); background: transparent; color: var(--secondary); }
 .player-card--signed-out { width: min(100%, 680px); margin: 0 auto; }
@@ -733,7 +773,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .receipt-payment-status { display: inline-flex; min-width: 62px; justify-content: center; padding: 5px 9px; border-radius: 999px; font-size: .65rem; font-weight: 850; text-transform: capitalize; }
 .receipt-payment-status--paid { background: color-mix(in srgb, var(--primary) 14%, var(--tertiary)); color: var(--primary); }
 .receipt-payment-status--unpaid { background: color-mix(in srgb, var(--secondary) 13%, var(--tertiary)); color: var(--secondary); }
-.reservation-pass > .calendar-actions { margin: 14px 22px 0; }
+.reservation-pass > .post-booking-actions { margin: 14px 22px 0; }
 .reservation-pass > p { margin: 0; padding: 18px 22px 22px; color: color-mix(in srgb, var(--neutral) 62%, transparent); font-size: .7rem; line-height: 1.5; text-align: center; }
 
 .receipt-verification { display: grid; min-height: calc(100dvh - 130px); place-items: center; padding: clamp(24px, 6vw, 72px) 20px; }
@@ -864,3 +904,16 @@ html[dir="rtl"] .notification-panel { right: 12px; left: 12px; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .sim-court__ball { left: 27% !important; top: 36% !important; }
 }
+/* A compact, inline lineup avoids another nested booking modal on mobile. */
+.reservation-lineup { flex-basis: 100%; min-width: 0; }
+.reservation-lineup__body { margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 20px; }
+.reservation-lineup__body ul { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+.reservation-lineup__body li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px; }
+.reservation-lineup__body li > div { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.reservation-lineup__body li a { font-weight: 700; }
+.reservation-lineup__body small, .reservation-lineup__help { color: color-mix(in srgb, var(--ink) 72%, var(--sand)); font-size: .82rem; line-height: 1.6; }
+.reservation-lineup__status { display: grid; gap: 6px; font-size: .9rem; line-height: 1.5; }
+.reservation-lineup__invite { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-block: 16px; }
+.reservation-lineup__invite label { display: grid; flex: 1 1 180px; gap: 8px; font-size: .85rem; }
+.reservation-lineup__invite select { width: 100%; min-height: 44px; border-radius: 12px; padding: 8px; background: var(--sand); color: inherit; border: 1px solid var(--border); }
+.reservation-lineup__help { margin-block: 10px; }

@@ -8,6 +8,7 @@ import { NotificationCenter } from "@/features/notifications/components/notifica
 import { CourtMark } from "@/shared/components/court-mark";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { appName } from "@/lib/config";
+import { isPublicPath } from "@/lib/route-access";
 
 const links = [
   { href: "/book", labelKey: "common.book", icon: CalendarDays },
@@ -22,7 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isLandingPage = pathname === "/";
   const isBookPage = pathname === "/book";
   const isProfilePage = pathname === "/profile" || pathname.startsWith("/profile/");
-  const isPublicRoute = pathname === "/" || pathname.startsWith("/auth/");
+  const isPublicRoute = isPublicPath(pathname);
 
   return (
     <div className={`site-shell${isPublicRoute ? " site-shell--public" : ""}${isBookPage ? " site-shell--calendar" : ""}${isProfilePage ? " site-shell--profile" : ""}`}>

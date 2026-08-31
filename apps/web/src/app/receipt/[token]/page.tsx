@@ -2,7 +2,12 @@
 
 import { CalendarClock, CheckCircle2, ShieldCheck } from 'lucide-react';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+
+export const metadata = {
+  robots: { index: false, follow: false },
+  referrer: 'no-referrer' as const,
+};
 
 type ReceiptRow = {
   end_at: string;
@@ -15,14 +20,20 @@ type ReceiptRow = {
 export default async function ReceiptVerificationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const validToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
-  const supabase = await createClient();
+  // This page deliberately uses only the public key, never a player's session.
+  // The receipt RPC exposes court/time/status, not private player/payment data.
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
+  );
   const result = validToken
     ? await supabase.rpc('lookup_reservation_receipt', { p_pass_token: token }).maybeSingle()
     : { data: null, error: null };
   const receipt = result.data as ReceiptRow | null;
 
   return (
-    <main className="receipt-verification" id="main-content">
+    <div className="receipt-verification">
       <section className="receipt-verification__card">
         <div className="receipt-verification__mark"><ShieldCheck aria-hidden="true" size={26} /></div>
         {receipt ? (
@@ -47,7 +58,7 @@ export default async function ReceiptVerificationPage({ params }: { params: Prom
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

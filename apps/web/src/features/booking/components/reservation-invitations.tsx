@@ -30,13 +30,16 @@ export function ReservationInvitations() {
   const refresh = useCallback(async () => {
     const { data, error } = await createClient().rpc("list_private_reservation_invitations");
     setInvitations((data as InvitationRow[] | null) ?? []);
-    setMessage(error ? t("invitations.loadError") : "");
+    if (error) setMessage(t("invitations.loadError"));
     setLoading(false);
   }, [t]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void refresh(), 0);
-    return () => window.clearTimeout(timeout);
+    const onUpdate = () => void refresh();
+    window.addEventListener("reservation-updated", onUpdate);
+    window.addEventListener("focus", onUpdate);
+    return () => { window.clearTimeout(timeout); window.removeEventListener("reservation-updated", onUpdate); window.removeEventListener("focus", onUpdate); };
   }, [refresh]);
 
   const incoming = invitations.filter((invitation) => !invitation.is_host && invitation.status === "pending");

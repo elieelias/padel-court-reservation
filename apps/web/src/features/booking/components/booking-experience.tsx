@@ -62,10 +62,10 @@ export function BookingExperience() {
   const [availabilityState, setAvailabilityState] = useState<AvailabilityState>("loading");
   const [availabilityVersion, setAvailabilityVersion] = useState(0);
   const [openCourt, setOpenCourt] = useState(false);
-  const [existingPlayers, setExistingPlayers] = useState(1);
   const [occurrenceCount, setOccurrenceCount] = useState(1);
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>("idle");
   const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [savedStatus, setSavedStatus] = useState<"pending" | "confirmed" | null>(null);
   const [friends, setFriends] = useState<FriendRow[]>([]);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
@@ -95,16 +95,16 @@ export function BookingExperience() {
   }, []);
 
   useEffect(() => {
-    if (!selectedTime || openCourt) return;
+    if (!selectedTime) return;
     let active = true;
-    // Friend choices are only needed after a private time has been selected.
+    // Both booking types invite named friends after a time has been selected.
     void createClient().rpc("list_friendships").then(({ data }) => {
       if (!active) return;
       setFriends(((data as FriendRow[] | null) ?? []).filter((item) => item.status === "accepted"));
       setFriendsLoading(false);
     });
     return () => { active = false; };
-  }, [openCourt, selectedTime]);
+  }, [selectedTime]);
 
   useEffect(() => {
     let active = true;
@@ -177,7 +177,6 @@ export function BookingExperience() {
     setDrag(null);
     setCalendarMessage("");
     setOpenCourt(false);
-    setExistingPlayers(1);
     setOccurrenceCount(1);
     setConfirmationState("idle");
     setConfirmationMessage("");
@@ -187,7 +186,6 @@ export function BookingExperience() {
   function dismissConfirmation() {
     setSelectedTime(null);
     setOpenCourt(false);
-    setExistingPlayers(1);
     setOccurrenceCount(1);
     setConfirmationState("idle");
     setConfirmationMessage("");
@@ -208,21 +206,20 @@ export function BookingExperience() {
     }
 
     const { startAt, endAt } = selectionDateRange(selectedTime, openingMinutes);
-    const { error } = occurrenceCount > 1
+    const { data: bookingIds, error } = occurrenceCount > 1
       ? await supabase.rpc("create_recurring_reservations", {
           p_start_at: startAt.toISOString(),
           p_end_at: endAt.toISOString(),
           p_type: openCourt ? "open" : "private",
-          p_initial_player_count: openCourt ? existingPlayers : 1,
-          p_friend_ids: openCourt ? [] : selectedFriendIds,
+          p_initial_player_count: 1,
+          p_friend_ids: selectedFriendIds,
           p_occurrence_count: occurrenceCount,
         })
       : openCourt
-        ? await supabase.rpc("create_reservation", {
+        ? await supabase.rpc("create_open_reservation", {
           p_start_at: startAt.toISOString(),
           p_end_at: endAt.toISOString(),
-          p_type: "open",
-          p_initial_player_count: existingPlayers,
+          p_friend_ids: selectedFriendIds,
         })
         : await supabase.rpc("create_private_reservation", {
           p_start_at: startAt.toISOString(),
@@ -237,8 +234,13 @@ export function BookingExperience() {
       return;
     }
 
+    // Read the committed status: invitation acceptance and court capacity decide it.
+    const bookingId = Array.isArray(bookingIds) ? bookingIds[0] : bookingIds;
+    const { data: savedBooking } = await supabase.from("reservations").select("status").eq("id", bookingId).single();
+    const status = savedBooking?.status === "pending" ? "pending" : savedBooking?.status === "confirmed" ? "confirmed" : null;
+    setSavedStatus(status);
     setConfirmationState("success");
-    setConfirmationMessage(occurrenceCount > 1 ? t("booking.recurringSuccess", { count: occurrenceCount }) : t("booking.successMessage"));
+    setConfirmationMessage(status === "pending" ? t(openCourt ? "lineup.pendingOpen" : "lineup.pendingPrivate") : status === "confirmed" ? (occurrenceCount > 1 ? t("booking.recurringSuccess", { count: occurrenceCount }) : t("booking.successMessage")) : t("booking.savedMessage"));
     setAvailabilityVersion((value) => value + 1);
   }
 
@@ -429,20 +431,15 @@ export function BookingExperience() {
         <BookingConfirmationSheet
           confirmationMessage={confirmationMessage}
           confirmationState={confirmationState}
-          existingPlayers={existingPlayers}
           friends={friends}
           friendsLoading={friendsLoading}
           locale={locale}
           maximumRecurringCount={maximumRecurringCount}
           onClear={clearSelection}
           onConfirm={() => void confirmReservation()}
+          savedStatus={savedStatus}
           onDismiss={dismissConfirmation}
-          onSetExistingPlayers={setExistingPlayers}
-          onSetOpenCourt={(nextOpenCourt) => {
-            setOpenCourt(nextOpenCourt);
-            setSelectedFriendIds([]);
-            if (!nextOpenCourt) setExistingPlayers(1);
-          }}
+          onSetOpenCourt={setOpenCourt}
           onSetOccurrenceCount={setOccurrenceCount}
           onToggleFriend={toggleFriend}
           openCourt={openCourt}

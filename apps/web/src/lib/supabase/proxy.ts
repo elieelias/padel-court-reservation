@@ -1,9 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-function isPublicPath(pathname: string) {
-  return pathname === "/" || pathname.startsWith("/auth/");
-}
+import { isPublicPath, isPublicReceiptPath } from "@/lib/route-access";
 
 function landingPageRedirect(request: NextRequest) {
   const landingPageUrl = request.nextUrl.clone();
@@ -14,6 +11,12 @@ function landingPageRedirect(request: NextRequest) {
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  if (isPublicReceiptPath(request.nextUrl.pathname)) {
+    // Camera scans must work without an account, including with expired cookies.
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  }
   const needsAuthentication = !isPublicPath(request.nextUrl.pathname);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

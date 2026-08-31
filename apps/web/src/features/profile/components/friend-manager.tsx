@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Search, UserPlus, Users, X } from "lucide-react";
+import { Check, Search, UserMinus, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +25,7 @@ type SearchRow = {
 
 export function FriendManager() {
   const { locale, t } = useLanguage();
+  const router = useRouter();
   const [connections, setConnections] = useState<FriendshipRow[]>([]);
   const [results, setResults] = useState<SearchRow[]>([]);
   const [query, setQuery] = useState("");
@@ -35,7 +37,15 @@ export function FriendManager() {
   const refresh = useCallback(async () => {
     const { data, error } = await createClient().rpc("list_friendships");
     if (error) setMessage(locale === "ar" ? t("friends.loadError") : error.message || t("friends.loadError"));
-    else setConnections((data as FriendshipRow[] | null) ?? []);
+    else {
+      const nextConnections = (data as FriendshipRow[] | null) ?? [];
+      setConnections(nextConnections);
+      // Keep search results in sync when either player removes a friendship.
+      setResults((items) => items.map((item) => {
+        const connection = nextConnections.find((entry) => entry.player_id === item.player_id && entry.status !== "rejected");
+        return { ...item, relationship_status: connection?.status ?? null, relationship_direction: connection?.direction ?? "none" };
+      }));
+    }
     setLoading(false);
   }, [locale, t]);
 
@@ -90,6 +100,7 @@ export function FriendManager() {
   }
 
   async function sendRequest(playerId: string) {
+    if (workingId) return;
     setWorkingId(playerId);
     setMessage("");
     const { error } = await createClient().rpc("send_friend_request", { p_player_id: playerId });
@@ -103,6 +114,7 @@ export function FriendManager() {
   }
 
   async function respond(friendshipId: string, accept: boolean) {
+    if (workingId) return;
     setWorkingId(friendshipId);
     setMessage("");
     const { error } = await createClient().rpc("respond_friend_request", { p_friendship_id: friendshipId, p_accept: accept });
@@ -111,6 +123,29 @@ export function FriendManager() {
     else {
       setMessage(accept ? t("friends.requestAccepted") : t("friends.requestDeclined"));
       await refresh();
+    }
+  }
+
+  async function unfriend(friend: FriendshipRow) {
+    if (workingId || !window.confirm(t("friends.unfriendConfirm", { username: friend.username }))) return;
+    setWorkingId(friend.friendship_id);
+    setMessage("");
+    try {
+      const { error } = await createClient().rpc("remove_friend", { p_friendship_id: friend.friendship_id });
+      if (error) {
+        setMessage(t("friends.unfriendError"));
+        return;
+      }
+      setConnections((items) => items.filter((item) => item.friendship_id !== friend.friendship_id));
+      setResults((items) => items.map((item) => item.player_id === friend.player_id
+        ? { ...item, relationship_status: null, relationship_direction: "none" }
+        : item));
+      setMessage(t("friends.unfriended", { username: friend.username }));
+      router.refresh();
+    } catch {
+      setMessage(t("friends.unfriendError"));
+    } finally {
+      setWorkingId(null);
     }
   }
 
@@ -143,7 +178,28 @@ export function FriendManager() {
 
       {incoming.length > 0 && <div className="friend-group friend-group--requests"><h3><span>{t("friends.requests")}</span><b>{incoming.length}</b></h3>{incoming.map((item) => <article className="friend-row" key={item.friendship_id}><Link className="friend-profile-link" href={`/players/${encodeURIComponent(item.username)}` as Route}><span className="friend-avatar">{item.username.slice(0, 1).toUpperCase()}</span><span><strong>@{item.username}</strong><small>{t("friends.wantsToConnect")}</small></span></Link><div className="friend-row__actions"><button aria-label={t("friends.accept")} className="friend-icon-button is-accept" disabled={workingId === item.friendship_id} onClick={() => void respond(item.friendship_id, true)} type="button"><Check aria-hidden="true" size={18} /></button><button aria-label={t("friends.decline")} className="friend-icon-button" disabled={workingId === item.friendship_id} onClick={() => void respond(item.friendship_id, false)} type="button"><X aria-hidden="true" size={18} /></button></div></article>)}</div>}
 
-      <div className="friend-group"><h3>{t("friends.yourFriends", { count: accepted.length })}</h3>{loading ? <p className="friends-empty">{t("common.loading")}</p> : accepted.length ? accepted.map((item) => <article className="friend-row" key={item.friendship_id}><Link className="friend-profile-link" href={`/players/${encodeURIComponent(item.username)}` as Route}><span className="friend-avatar">{item.username.slice(0, 1).toUpperCase()}</span><span><strong>@{item.username}</strong><small>{t("friends.readyToBook")}</small></span></Link></article>) : <p className="friends-empty">{t("friends.noFriends")}</p>}</div>
+      <div className="friend-group">
+        <h3>{t("friends.yourFriends", { count: accepted.length })}</h3>
+        {loading ? <p className="friends-empty">{t("common.loading")}</p> : accepted.length ? accepted.map((item) => (
+          <article className="friend-row" key={item.friendship_id}>
+            <Link className="friend-profile-link" href={`/players/${encodeURIComponent(item.username)}` as Route}>
+              <span className="friend-avatar">{item.username.slice(0, 1).toUpperCase()}</span>
+              <span><strong>@{item.username}</strong><small>{t("friends.readyToBook")}</small></span>
+            </Link>
+            <button
+              aria-label={t("friends.unfriendUser", { username: item.username })}
+              aria-busy={workingId === item.friendship_id}
+              className="friend-unfriend-button"
+              disabled={workingId !== null}
+              onClick={() => void unfriend(item)}
+              type="button"
+            >
+              <UserMinus aria-hidden="true" size={16} />
+              {workingId === item.friendship_id ? t("friends.unfriending") : t("friends.unfriend")}
+            </button>
+          </article>
+        )) : <p className="friends-empty">{t("friends.noFriends")}</p>}
+      </div>
       {outgoing.length > 0 && <p className="friends-pending-note">{t("friends.outgoing", { count: outgoing.length })}</p>}
     </section>
   );

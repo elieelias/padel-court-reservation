@@ -21,7 +21,7 @@ type NotificationRow = {
   reservation_end_at: string | null;
 };
 
-type NotificationTarget = "/profile/friends" | "/open-courts" | `/open-courts/${string}` | "/profile/history" | "/book" | "/book#upcoming-reservations" | "/book#reservation-invitations" | "/events";
+type NotificationTarget = "/profile/friends" | "/open-courts" | "/open-courts#my-waitlist" | `/open-courts/${string}` | "/profile/history" | "/book" | "/book#upcoming-reservations" | "/book#reservation-invitations" | "/events";
 
 export function NotificationCenter() {
   const { locale, t } = useLanguage();
@@ -80,6 +80,10 @@ export function NotificationCenter() {
   function details(item: NotificationRow): { icon: typeof CalendarDays; text: string; href: NotificationTarget } {
     const name = item.actor_username ? `@${item.actor_username}` : t("notifications.aPlayer");
     const isFriend = Boolean(item.friendship_id);
+    if (item.event_type === "reservation_pending") return { icon: CalendarDays, text: t("notifications.bookingPending"), href: "/book#upcoming-reservations" };
+    if (item.event_type === "reservation_ready") return { icon: CalendarDays, text: t("notifications.bookingReady"), href: "/book#upcoming-reservations" };
+    if (item.event_type === "reservation_player_left") return { icon: UsersRound, text: t("notifications.playerLeft", { name }), href: "/book#upcoming-reservations" };
+    if (item.event_type === "reservation_player_removed") return { icon: UsersRound, text: t("notifications.playerRemoved"), href: "/book#upcoming-reservations" };
     if (item.event_type === "discount_announcement") return { icon: BadgePercent, text: t("notifications.discountAnnouncement"), href: "/events" };
     if (isFriend && item.event_type === "join_request_created") return { icon: UserRoundPlus, text: t("notifications.friendRequest", { name }), href: "/profile/friends" };
     if (isFriend && item.event_type === "join_request_accepted") return { icon: UsersRound, text: t("notifications.friendAccepted", { name }), href: "/profile/friends" };
@@ -87,8 +91,8 @@ export function NotificationCenter() {
     if (item.event_type === "reservation_invitation") return { icon: MailCheck, text: t("notifications.reservationInvitation", { name }), href: "/book#reservation-invitations" };
     if (item.event_type === "reservation_invitation_accepted") return { icon: UsersRound, text: t("notifications.invitationAccepted", { name }), href: "/book#reservation-invitations" };
     if (item.event_type === "reservation_invitation_declined") return { icon: UsersRound, text: t("notifications.invitationDeclined", { name }), href: "/book#reservation-invitations" };
-    if (item.event_type === "waitlist_joined") return { icon: ListOrdered, text: t("notifications.waitlistJoined", { name }), href: "/book#upcoming-reservations" };
-    if (item.event_type === "waitlist_added") return { icon: ListOrdered, text: t("notifications.waitlistAdded"), href: "/open-courts" };
+    if (item.event_type === "waitlist_joined") return { icon: ListOrdered, text: t("notifications.waitlistJoined", { name }), href: item.reservation_id ? `/open-courts/${item.reservation_id}` : "/open-courts" };
+    if (item.event_type === "waitlist_added") return { icon: ListOrdered, text: t("notifications.waitlistAdded"), href: "/open-courts#my-waitlist" };
     if (item.event_type === "waitlist_promoted") return { icon: ListOrdered, text: t("notifications.waitlistPromoted"), href: "/book#upcoming-reservations" };
     if (item.event_type === "court_available") return { icon: CalendarDays, text: t("notifications.courtAvailable"), href: "/book" };
     if (item.event_type === "join_request_created") return { icon: UserRoundPlus, text: t("notifications.openCourtRequest", { name }), href: "/open-courts" };

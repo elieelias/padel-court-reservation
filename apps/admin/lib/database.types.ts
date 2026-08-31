@@ -1065,6 +1065,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_open_reservation: {
+        Args: { p_end_at: string; p_friend_ids: string[]; p_start_at: string }
+        Returns: string
+      }
       create_private_reservation: {
         Args: { p_end_at: string; p_friend_ids: string[]; p_start_at: string }
         Returns: string
@@ -1130,6 +1134,10 @@ export type Database = {
           username: string
         }[]
       }
+      get_reservation_lineup: {
+        Args: { p_reservation_id: string }
+        Returns: Json
+      }
       get_reservation_receipt_players: {
         Args: { p_reservation_ids: string[] }
         Returns: {
@@ -1139,11 +1147,16 @@ export type Database = {
           username: string
         }[]
       }
+      invite_reservation_friend: {
+        Args: { p_player_id: string; p_reservation_id: string }
+        Returns: string
+      }
       join_reservation_waitlist: {
         Args: { p_reservation_id: string }
         Returns: string
       }
       leave_open_court: { Args: { p_reservation_id: string }; Returns: string }
+      leave_reservation: { Args: { p_reservation_id: string }; Returns: string }
       leave_reservation_waitlist: {
         Args: { p_reservation_id: string }
         Returns: string
@@ -1169,6 +1182,20 @@ export type Database = {
           username: string
         }[]
       }
+      list_my_waitlists: {
+        Args: never
+        Returns: {
+          available_spots: number
+          end_at: string
+          host_username: string
+          player_count: number
+          queue_position: number
+          reservation_id: string
+          reservation_type: string
+          start_at: string
+          waitlist_id: string
+        }[]
+      }
       list_open_court_requests: {
         Args: never
         Returns: {
@@ -1178,6 +1205,15 @@ export type Database = {
           requested_at: string
           reservation_id: string
           start_at: string
+        }[]
+      }
+      list_open_court_waitlist: {
+        Args: { p_reservation_id: string }
+        Returns: {
+          joined_at: string
+          player_username: string
+          queue_position: number
+          waitlist_id: string
         }[]
       }
       list_open_courts: {
@@ -1224,9 +1260,27 @@ export type Database = {
           status: string
         }[]
       }
+      lookup_reservation_receipt: {
+        Args: { p_pass_token: string }
+        Returns: {
+          end_at: string
+          facility_name: string
+          reservation_status: string
+          reservation_type: string
+          start_at: string
+        }[]
+      }
       mark_notifications_read: {
         Args: { p_notification_ids?: string[] }
         Returns: number
+      }
+      remove_friend: {
+        Args: { p_friendship_id: string }
+        Returns: string
+      }
+      remove_reservation_player: {
+        Args: { p_player_id: string; p_reservation_id: string }
+        Returns: string
       }
       request_open_court_join: {
         Args: { p_reservation_id: string }
@@ -1290,6 +1344,7 @@ export type Database = {
     }
   }
 }
+
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
