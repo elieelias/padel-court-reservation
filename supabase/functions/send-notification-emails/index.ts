@@ -76,6 +76,7 @@ function messageFor(item: OutboxItem) {
     reservation_player_removed: { subject: "Reservation place removed", heading: "Your lineup changed", body: "The host removed your place or invitation from a reservation." },
     reservation_confirmation: { subject: "Reservation confirmed", heading: "Your court is confirmed", body: "Your padel court reservation has been confirmed." },
     reservation_cancellation: { subject: "Reservation cancelled", heading: "Reservation cancelled", body: "A padel court reservation was cancelled." },
+    blocked_time_cancellation: { subject: "Reservation cancelled by the facility", heading: "Your reservation was cancelled", body: "The facility blocked this court time, so your reservation was cancelled. You do not need to take any action." },
     reservation_reminder: { subject: "Upcoming padel reservation", heading: "Your court is coming up", body: "This is a reminder for your upcoming padel court reservation." },
     participant_removed: { subject: "Reservation participant update", heading: "Your reservation changed", body: "You are no longer listed as a participant in this reservation." },
     open_court_auto_cancelled: { subject: "Open court cancelled", heading: "Open court cancelled", body: "The open court was cancelled because it did not have enough confirmed players." },

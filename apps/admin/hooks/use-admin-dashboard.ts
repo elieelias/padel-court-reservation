@@ -257,24 +257,33 @@ export function useAdminDashboard() {
         const { error } = await adminApi.createBlockedPeriod(values, timeZone);
         return { error };
       },
-      'Blocked period created.',
+      'Blocked period created. Overlapping reservations were cancelled and their players notified.',
     );
   }
 
   function deleteBlockedPeriod(period: BlockedPeriod) {
-    Alert.alert('Remove blocked period', 'Make this time available for reservations again?', [
+    const message = 'Make this time available for reservations again?';
+    const remove = () => void runAction(
+      `delete-block-${period.id}`,
+      async () => {
+        const { error } = await adminApi.removeBlockedPeriod(period);
+        return { error };
+      },
+      'Blocked period removed.',
+    );
+
+    // React Native's multi-button alert is unavailable in the web build.
+    if (Platform.OS === 'web') {
+      if (globalThis.confirm(`Remove blocked period\n\n${message}`)) remove();
+      return;
+    }
+
+    Alert.alert('Remove blocked period', message, [
       { text: 'Keep blocked', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => void runAction(
-          `delete-block-${period.id}`,
-          async () => {
-            const { error } = await adminApi.removeBlockedPeriod(period);
-            return { error };
-          },
-          'Blocked period removed.',
-        ),
+        onPress: remove,
       },
     ]);
   }

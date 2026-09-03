@@ -14,7 +14,8 @@
     "test:friends": "node --test tests/unfriend.test.mjs",
     "test:invitations": "node --test tests/pending-invitations.test.mjs",
     "test:receipt": "node --test tests/reservation-pass.test.mjs",
-    "test:history": "node --test tests/reservation-history.test.mjs"
+    "test:history": "node --test tests/reservation-history.test.mjs",
+    "test:blocked-time": "node --test tests/blocked-time-cancellation.test.mjs"
   },
   "dependencies": {
     "@fontsource/epilogue": "5.3.0",

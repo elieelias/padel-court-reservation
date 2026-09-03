@@ -95,6 +95,20 @@ export function BookingExperience() {
   }, []);
 
   useEffect(() => {
+    // Facility blocks can cancel a booking while this page is already open.
+    // Refresh availability promptly so only the maintenance block remains.
+    const refreshAvailability = () => {
+      if (document.visibilityState === "visible") setAvailabilityVersion((value) => value + 1);
+    };
+    const timer = window.setInterval(refreshAvailability, 15_000);
+    window.addEventListener("focus", refreshAvailability);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshAvailability);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!selectedTime) return;
     let active = true;
     // Both booking types invite named friends after a time has been selected.
