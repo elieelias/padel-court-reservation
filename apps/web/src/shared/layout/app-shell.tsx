@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { NotificationCenter } from "@/features/notifications/components/notification-center";
 import { CourtMark } from "@/shared/components/court-mark";
+import { useFacilityBrand } from "@/shared/facility/facility-provider";
 import { useLanguage } from "@/shared/preferences/language-provider";
-import { appName } from "@/lib/config";
 import { isPublicPath } from "@/lib/route-access";
 
 const links = [
@@ -19,6 +19,7 @@ const links = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useLanguage();
+  const { facilityName } = useFacilityBrand();
   const pathname = usePathname();
   const isLandingPage = pathname === "/";
   const isBookPage = pathname === "/book";
@@ -28,9 +29,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={`site-shell${isPublicRoute ? " site-shell--public" : ""}${isBookPage ? " site-shell--calendar" : ""}${isProfilePage ? " site-shell--profile" : ""}`}>
       <header className="site-header">
-        <Link className="brand" href="/" aria-label={`${appName} ${t("common.home")}`}>
+        <Link className="brand" href="/book" aria-label={`${facilityName} ${t("common.book")}`}>
           <CourtMark compact />
-          <span>{appName}</span>
+          <span>{facilityName}</span>
         </Link>
         <div className="header-actions">
           {isLandingPage ? <Link className="button button--primary" href="/auth/sign-up">{t("common.join")}</Link> : null}
@@ -66,13 +67,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       {isLandingPage && (
         <footer className="site-footer">
           <div>
-            <Link className="brand" href="/" aria-label={`${appName} ${t("common.home")}`}><CourtMark compact /><span>{appName}</span></Link>
+            <Link className="brand" href="/book" aria-label={`${facilityName} ${t("common.book")}`}><CourtMark compact /><span>{facilityName}</span></Link>
           </div>
           <nav aria-label={t("common.footerNavigation")}>
             <Link href="/auth/sign-up">{t("common.join")}</Link>
             <Link href="/auth/sign-in">{t("common.signIn")}</Link>
           </nav>
-          <small>© {new Date().getFullYear()} {appName}</small>
+          <small>© {new Date().getFullYear()} {facilityName}</small>
         </footer>
       )}
     </div>

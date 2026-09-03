@@ -8,6 +8,9 @@ export function getErrorMessage(error: { message?: string } | null, fallback: st
   if (error.message.includes('blocked_periods_no_overlap')) {
     return 'That time overlaps another blocked period.';
   }
+  if (error.message.includes('blocked_periods_unique_time')) {
+    return 'This period is already blocked.';
+  }
   return error.message;
 }
 

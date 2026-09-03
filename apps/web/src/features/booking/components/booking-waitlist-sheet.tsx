@@ -1,7 +1,7 @@
 import { ListOrdered, X } from "lucide-react";
-import { facilityName } from "@/lib/config";
 import { intlLocale, type Locale, type Translator } from "@/lib/i18n";
 import { facilityTimeZone, type WaitlistOpportunity } from "@/features/booking/lib/booking-calendar";
+import { useFacilityBrand } from "@/shared/facility/facility-provider";
 
 type BookingWaitlistSheetProps = {
   locale: Locale;
@@ -15,6 +15,7 @@ type BookingWaitlistSheetProps = {
 };
 
 export function BookingWaitlistSheet({ locale, message, onClose, onUpdate, selectedDateLabel, t, target, working }: BookingWaitlistSheetProps) {
+  const { facilityName } = useFacilityBrand();
   if (target.reservation_type !== "open") return null;
   const alreadyWaiting = target.waitlist_status === "waiting";
   const time = new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", minute: "2-digit", timeZone: facilityTimeZone });

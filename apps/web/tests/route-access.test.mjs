@@ -30,14 +30,17 @@ test("only single UUID receipt paths are public", () => {
   assert.equal(access.isPublicPath("/auth/hooks/before-user-created"), true);
 });
 
-function proxy({ signedIn = false, configured = true } = {}) {
+function proxy({ signedIn = false, configured = true, refreshCookie = false } = {}) {
   let calls = 0;
   const { updateSession } = load("../src/lib/supabase/proxy.ts", (id) => {
     if (id === "@/lib/route-access") return access;
     if (id === "next/server") return { NextResponse };
-    if (id === "@supabase/ssr") return { createServerClient: () => {
+    if (id === "@supabase/ssr") return { createServerClient: (_url, _key, config) => {
       calls++;
-      return { auth: { getClaims: async () => ({ data: signedIn ? { claims: { sub: "test-player" } } : null }) } };
+      return { auth: { getClaims: async () => {
+        if (refreshCookie) config.cookies.setAll([{ name: "session-test", value: "fresh", options: { httpOnly: true, path: "/", sameSite: "lax" } }]);
+        return { data: signedIn ? { claims: { sub: "test-player" } } : null };
+      } } };
     } };
     throw new Error(`Unexpected import: ${id}`);
   }, configured ? { NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-key" } : {});
@@ -66,6 +69,27 @@ test("signed-in players still reach protected pages", async () => {
   const response = await proxy({ signedIn: true }).updateSession(new NextRequest("https://app.test/book"));
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("location"), null);
+});
+
+test("signed-in players cannot reopen the landing page", async () => {
+  const response = await proxy({ signedIn: true, refreshCookie: true }).updateSession(new NextRequest("https://app.test/?from=old-link"));
+  assert.equal(response.status, 307);
+  assert.equal(response.headers.get("location"), "https://app.test/book");
+  assert.equal(response.cookies.get("session-test")?.value, "fresh");
+  assert.match(response.headers.get("set-cookie") ?? "", /HttpOnly/);
+});
+
+test("signed-out visitors can still reach the landing page", async () => {
+  const response = await proxy().updateSession(new NextRequest("https://app.test/"));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("location"), null);
+});
+
+test("the app logo and 404 action point directly to Book", () => {
+  const shell = readFileSync(new URL("../src/shared/layout/app-shell.tsx", import.meta.url), "utf8");
+  const notFound = readFileSync(new URL("../src/app/not-found.tsx", import.meta.url), "utf8");
+  assert.equal((shell.match(/className="brand" href="\/book"/g) ?? []).length, 2);
+  assert.match(notFound, /href="\/book"/);
 });
 
 test("missing app configuration does not open protected routes", async () => {

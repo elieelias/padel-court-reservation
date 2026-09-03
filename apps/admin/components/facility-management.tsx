@@ -57,6 +57,10 @@ export function BlockedPeriodsPanel({
       setError('End time must be after start time.');
       return;
     }
+    if (periods.some((period) => period.start_at === startAt && period.end_at === endAt)) {
+      setError('This period is already blocked.');
+      return;
+    }
     setError('');
     const success = await onCreate(values);
     if (success) setValues((current) => ({ ...current, reason: '' }));

@@ -21,6 +21,7 @@ function load(file, extra = "") {
         useMemo: (fn) => fn(), useState: (value) => [value, () => {}],
       };
       if (id === "@/shared/preferences/language-provider") return { useLanguage: () => ({ locale: "en", t: (key) => key }) };
+      if (id === "@/shared/facility/facility-provider") return { useFacilityBrand: () => ({ facilityName: "Test Court" }) };
       if (id === "@/lib/i18n") return { intlLocale: () => "en-US" };
       if (id.endsWith("/receipt-link")) return { reservationReceiptUrl: () => "https://example.test/receipt/test" };
       if (id.endsWith("/calendar-links")) return { googleCalendarUrl: () => "https://calendar.google.com", appleCalendarFile: () => "" };

@@ -97,6 +97,16 @@ test("Google Calendar includes the exact UTC range and weekly count", () => {
   assert.equal(url.searchParams.get("recur"), "RRULE:FREQ=WEEKLY;COUNT=3");
 });
 
+test("calendar exports use the current administrator-managed facility name", () => {
+  const displayName = "Blue Court Club";
+  const google = new URL(googleCalendarUrl(reservation, displayName));
+  const apple = appleCalendarFile(reservation, displayName);
+  assert.equal(google.searchParams.get("text"), `${displayName} reservation`);
+  assert.equal(google.searchParams.get("location"), displayName);
+  assert.ok(apple.includes(`SUMMARY:${displayName} reservation`));
+  assert.ok(apple.includes(`LOCATION:${displayName}`));
+});
+
 test("Apple Calendar contains the reservation and escapes venue punctuation", () => {
   const file = appleCalendarFile(reservation);
   assert.ok(file.startsWith("BEGIN:VCALENDAR\r\n"));

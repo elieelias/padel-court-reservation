@@ -2,8 +2,9 @@
 
 import { CalendarPlus, Download, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { appName, facilityName, siteUrl } from "@/lib/config";
+import { siteUrl } from "@/lib/config";
 import { intlLocale } from "@/lib/i18n";
+import { useFacilityBrand } from "@/shared/facility/facility-provider";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { appleCalendarFile, type CalendarReservation, googleCalendarUrl } from "@/features/booking/lib/calendar-links";
 import { shareReservationDetails } from "@/features/booking/lib/reservation-sharing";
@@ -11,6 +12,7 @@ import { shareReservationDetails } from "@/features/booking/lib/reservation-shar
 /** Groups the useful next steps that remain available after a booking. */
 export function PostBookingActions({ showShare = true, ...reservation }: CalendarReservation & { showShare?: boolean }) {
   const { locale, t } = useLanguage();
+  const { facilityName } = useFacilityBrand();
   const [shareMessage, setShareMessage] = useState("");
   const [manualCopy, setManualCopy] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -27,7 +29,7 @@ export function PostBookingActions({ showShare = true, ...reservation }: Calenda
       ? ` · ${t("booking.weeklyBookings", { count: reservation.occurrenceCount ?? 1 })}`
       : "";
     return t("booking.shareText", { facility: facilityName, schedule, repetition });
-  }, [locale, reservation.endAt, reservation.occurrenceCount, reservation.startAt, t]);
+  }, [facilityName, locale, reservation.endAt, reservation.occurrenceCount, reservation.startAt, t]);
 
   useEffect(() => {
     if (!shareMessage) return;
@@ -36,11 +38,11 @@ export function PostBookingActions({ showShare = true, ...reservation }: Calenda
   }, [shareMessage]);
 
   function downloadAppleCalendar() {
-    const file = new Blob([appleCalendarFile(reservation)], { type: "text/calendar;charset=utf-8" });
+    const file = new Blob([appleCalendarFile(reservation, facilityName)], { type: "text/calendar;charset=utf-8" });
     const url = URL.createObjectURL(file);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "padel-one-reservation.ics";
+    link.download = "padel-reservation.ics";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -57,7 +59,7 @@ export function PostBookingActions({ showShare = true, ...reservation }: Calenda
       // Share the public app address, never a receipt's check-in token or a
       // private account URL. Sharing details is not an invitation to join.
       const result = await shareReservationDetails(
-        { title: `${appName} · ${facilityName}`, text: shareText, url: siteUrl },
+        { title: facilityName, text: shareText, url: siteUrl },
         {
           share: navigator.share ? (data) => navigator.share(data) : undefined,
           copy: navigator.clipboard ? (text) => navigator.clipboard.writeText(text) : undefined,
@@ -76,7 +78,7 @@ export function PostBookingActions({ showShare = true, ...reservation }: Calenda
     <section aria-label={t("booking.afterBooking")} className="post-booking-actions">
       <strong>{t("booking.afterBooking")}</strong>
       <div className="post-booking-actions__grid">
-        <a className="post-booking-action" href={googleCalendarUrl(reservation)} rel="noreferrer" target="_blank">
+        <a className="post-booking-action" href={googleCalendarUrl(reservation, facilityName)} rel="noreferrer" target="_blank">
           <CalendarPlus aria-hidden="true" size={17} />{t("calendar.google")}
         </a>
         <button className="post-booking-action" onClick={downloadAppleCalendar} type="button">

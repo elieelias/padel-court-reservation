@@ -4,6 +4,10 @@ export const appName =
 export const facilityName =
   process.env.NEXT_PUBLIC_FACILITY_NAME?.trim() || "Padel Court";
 
+export function normalizeFacilityName(value: unknown, fallback = appName) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
 export const defaultSiteUrl = "https://padel-court-reservation-web.vercel.app";
 
 export const siteUrl = (

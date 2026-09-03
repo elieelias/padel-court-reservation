@@ -1,8 +1,8 @@
 import { CalendarDays, Check, CheckCircle2, Users, X } from "lucide-react";
 import Link from "next/link";
-import { facilityName } from "@/lib/config";
 import type { Locale, Translator } from "@/lib/i18n";
 import { PostBookingActions } from "@/features/booking/components/post-booking-actions";
+import { useFacilityBrand } from "@/shared/facility/facility-provider";
 import {
   type ConfirmationState,
   type FriendRow,
@@ -59,6 +59,7 @@ export function BookingConfirmationSheet({
   selectionIsInvalid,
   t,
 }: BookingConfirmationSheetProps) {
+  const { facilityName } = useFacilityBrand();
   const saving = confirmationState === "saving";
   const calendarRange = selectionDateRange(selectedTime, openingMinutes);
 
@@ -71,7 +72,7 @@ export function BookingConfirmationSheet({
           <div className="booking-confirmation-success">
             <span className="booking-confirmation-success__icon"><CheckCircle2 aria-hidden="true" size={28} /></span>
             <div><h2 id="confirm-booking-heading">{t(savedStatus === "pending" ? "booking.pendingTitle" : savedStatus === "confirmed" ? "booking.successTitle" : "booking.savedTitle")}</h2><p>{confirmationMessage}</p></div>
-            <ReservationSummary dateLabel={selectedDateLabel} locale={locale} occurrenceCount={occurrenceCount} openingMinutes={openingMinutes} selectedTime={selectedTime} t={t} />
+            <ReservationSummary dateLabel={selectedDateLabel} facilityName={facilityName} locale={locale} occurrenceCount={occurrenceCount} openingMinutes={openingMinutes} selectedTime={selectedTime} t={t} />
             <PostBookingActions endAt={calendarRange.endAt} occurrenceCount={occurrenceCount} startAt={calendarRange.startAt} />
             <a className="button button--primary confirmation-action" href="/book#upcoming-reservations">{t("booking.viewReservation")}</a>
             <button className="button booking-confirmation-sheet__cancel" type="button" onClick={onClear}>{t("booking.done")}</button>
@@ -82,7 +83,7 @@ export function BookingConfirmationSheet({
               <h2 id="confirm-booking-heading">{t("booking.confirmTitle")}</h2>
               <button className="sheet-close" disabled={saving} type="button" aria-label={t("common.close")} onClick={onDismiss}><X aria-hidden="true" size={20} /></button>
             </div>
-            <ReservationSummary dateLabel={selectedDateLabel} locale={locale} occurrenceCount={occurrenceCount} openingMinutes={openingMinutes} selectedTime={selectedTime} t={t} />
+            <ReservationSummary dateLabel={selectedDateLabel} facilityName={facilityName} locale={locale} occurrenceCount={occurrenceCount} openingMinutes={openingMinutes} selectedTime={selectedTime} t={t} />
             <label className="open-court-toggle">
               <span><strong>{t("booking.openCourt")}</strong><small>{t("booking.openCourtHelp")}</small></span>
               <input type="checkbox" checked={openCourt} disabled={saving} onChange={(event) => onSetOpenCourt(event.target.checked)} />
@@ -134,8 +135,9 @@ export function BookingConfirmationSheet({
   );
 }
 
-function ReservationSummary({ dateLabel, locale, occurrenceCount, openingMinutes, selectedTime, t }: {
+function ReservationSummary({ dateLabel, facilityName, locale, occurrenceCount, openingMinutes, selectedTime, t }: {
   dateLabel: string;
+  facilityName: string;
   locale: Locale;
   occurrenceCount: number;
   openingMinutes: number;

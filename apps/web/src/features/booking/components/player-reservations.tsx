@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { useFacilityBrand } from "@/shared/facility/facility-provider";
 import { useLanguage } from "@/shared/preferences/language-provider";
 import { intlLocale, type Locale, type TranslationKey } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -106,6 +107,7 @@ function ReservationCard({ reservation, showPayment = false, action }: { reserva
 
 function ReservationPass({ playerName, reservation, onClose }: { playerName: string; reservation: ReservationRow; onClose: () => void }) {
   const { locale, t } = useLanguage();
+  const { facilityName } = useFacilityBrand();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -131,7 +133,7 @@ function ReservationPass({ playerName, reservation, onClose }: { playerName: str
     <dialog aria-label={t("profile.reservationPass")} className="reservation-pass-backdrop" ref={dialogRef} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="reservation-pass">
         <header className="reservation-pass__header">
-          <div><span>{t("profile.reservationPass")}</span><strong>Padel One</strong></div>
+          <div><span>{t("profile.reservationPass")}</span><strong>{facilityName}</strong></div>
           <button aria-label={t("common.close")} className="reservation-pass__close" onClick={onClose} type="button"><X aria-hidden="true" size={22} /></button>
         </header>
         <div className="reservation-pass__body">
