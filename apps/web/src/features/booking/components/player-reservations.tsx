@@ -237,7 +237,7 @@ export function UpcomingReservations({ initialReservations, initialUser, cancell
   );
 }
 
-export function ReservationHistory({ reservations }: { reservations: ReservationRow[] }) {
+export function ReservationHistory({ reservations, loadError = false }: { reservations: ReservationRow[]; loadError?: boolean }) {
   const { locale, t } = useLanguage();
   const [grouping, setGrouping] = useState<HistoryGrouping>("day");
   const visibleReservations = reservations.filter((reservation) => reservation.status !== "cancelled");
@@ -256,7 +256,8 @@ export function ReservationHistory({ reservations }: { reservations: Reservation
   return (
     <section className="panel reservation-list-card profile-history-card">
       <div className="section-heading"><div><span className="eyebrow">{t("profile.historyEyebrow")}</span><h2>{t("profile.historyTitle")}</h2></div><History aria-hidden="true" size={25} /></div>
-      {visibleReservations.length ? (
+      {loadError ? <p className="profile-message profile-message--error" role="alert">{t("profile.historyLoadError")}</p> : null}
+      {!loadError && visibleReservations.length ? (
         <>
           <div aria-label={t("profile.groupHistory")} className="history-grouping" role="group">
             {(["day", "week", "month"] as const).map((option) => (
@@ -274,7 +275,7 @@ export function ReservationHistory({ reservations }: { reservations: Reservation
             ))}
           </div>
         </>
-      ) : <div className="empty-reservation"><strong>{t("profile.noHistory")}</strong><span>{t("profile.noHistoryText")}</span><Link className="text-link" href="/book">{t("profile.bookCourt")}</Link></div>}
+      ) : !loadError ? <div className="empty-reservation"><strong>{t("profile.noHistory")}</strong><span>{t("profile.noHistoryText")}</span><Link className="text-link" href="/book">{t("profile.bookCourt")}</Link></div> : null}
     </section>
   );
 }
