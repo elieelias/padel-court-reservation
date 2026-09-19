@@ -61,6 +61,19 @@ For example, the `/book` route points to `features/booking/pages/book-page.tsx`.
 - `pnpm build` — create a production player build
 - `pnpm typecheck:admin` — check the administrator application
 - `pnpm lint:admin` — lint the administrator application
+- `pnpm test` — run the player website's automated test suite
+- `pnpm check` — run every lint, typecheck, test, and production-build gate
+
+## Continuous integration
+
+GitHub Actions runs `pnpm check` for every pull request and every push to
+`main`. A change is considered ready to merge only after the player website
+and administrator application pass linting and TypeScript checks, the
+automated tests pass, and the player website completes a production build.
+
+Vercel remains responsible for preview and production deployments. Protect
+the `main` branch in GitHub and require the `Lint, typecheck, test, and build`
+status check to prevent unverified changes from being merged.
 
 ## Authentication and backend
 
