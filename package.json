@@ -11,6 +11,8 @@
     "lint": "pnpm --filter web lint",
     "lint:admin": "pnpm --filter admin lint",
     "typecheck": "pnpm --filter web typecheck",
-    "typecheck:admin": "pnpm --filter admin typecheck"
+    "typecheck:admin": "pnpm --filter admin typecheck",
+    "test": "pnpm --filter web exec node --test tests/*.test.mjs",
+    "check": "pnpm lint && pnpm lint:admin && pnpm typecheck && pnpm typecheck:admin && pnpm test && pnpm build"
   }
 }
